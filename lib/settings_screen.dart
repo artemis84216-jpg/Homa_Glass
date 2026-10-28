@@ -95,6 +95,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // متد جدید برای بازنشانی کامل دیتابیس
+  Future<void> _resetDatabaseCompletely() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: AppTheme.cardBlack,
+          title: const Text('⚠️ بازنشانی کامل دیتابیس', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+          content: const Text(
+            'این عمل فایل دیتابیس را کاملاً حذف می‌کند و برنامه از صفر شروع می‌شود. تمام اطلاعات پاک خواهند شد.\n\nاگر با خطای دیتابیس مواجه هستید، این گزینه را بزنید.\n\nآیا مطمئن هستید؟',
+            style: TextStyle(color: AppTheme.textWhite),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('بله، بازنشانی کن', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirm == true) {
+      try {
+        await DatabaseHelper.instance.resetDatabaseCompletely();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ دیتابیس بازنشانی شد. برنامه را ببندید و دوباره باز کنید.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطا در بازنشانی: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _logout() {
     showDialog(
       context: context,
@@ -131,6 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // کارت تغییر رمز
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -159,6 +201,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // کارت پشتیبان‌گیری
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -184,6 +228,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // کارت بازنشانی کامل دیتابیس (جدید)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(children: [Icon(Icons.refresh, color: Colors.orange), SizedBox(width: 8), Text('بازنشانی کامل دیتابیس', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))]),
+                      const SizedBox(height: 12),
+                      const Text('اگر با خطای دیتابیس مواجه هستید، این گزینه را بزنید. فایل دیتابیس حذف و از صفر ساخته می‌شود.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                          onPressed: _resetDatabaseCompletely,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('بازنشانی دیتابیس', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // کارت حذف کامل اطلاعات
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -209,6 +282,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // کارت خروج
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),

@@ -36,6 +36,22 @@ class _FramesScreenState extends State<FramesScreen> {
     });
   }
 
+  void _showFullScreenImage(BuildContext context, String imagePath) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(ctx),
+          child: InteractiveViewer(
+            panEnabled: true, boundaryMargin: const EdgeInsets.all(20), minScale: 0.5, maxScale: 4.0,
+            child: Image.file(File(imagePath), fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showDialog({Map<String, dynamic>? item}) async {
     final isEdit = item != null;
     final nameController = TextEditingController(text: item?['name']?.toString() ?? '');
@@ -47,80 +63,99 @@ class _FramesScreenState extends State<FramesScreen> {
     final sellController = TextEditingController(text: (item?['sell_price'] ?? 0).toInt().toString());
     final stockController = TextEditingController(text: (item?['stock_quantity'] ?? 0).toString());
     String material = item?['material']?.toString() ?? frameMaterials.first;
-    String? imagePath = item?['image_path'];
+    String? imagePathsJson = item?['image_path'];
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setStateDialog) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            backgroundColor: AppTheme.cardBlack,
-            title: Text(isEdit ? 'ویرایش فریم' : 'افزودن فریم جدید', style: const TextStyle(color: AppTheme.yellow)),
-            content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextField(controller: nameController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام فریم *', prefixIcon: Icon(Icons.style, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                TextField(controller: brandController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'برند', prefixIcon: Icon(Icons.business, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                TextField(controller: modelController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'مدل', prefixIcon: Icon(Icons.category, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: TextField(controller: colorController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'رنگ', prefixIcon: Icon(Icons.color_lens, color: AppTheme.yellow)))),
-                  const SizedBox(width: 8),
-                  Expanded(child: DropdownButtonFormField<String>(value: material, dropdownColor: AppTheme.cardBlack, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'جنس', prefixIcon: Icon(Icons.build, color: AppTheme.yellow)), items: frameMaterials.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(), onChanged: (v) => setStateDialog(() => material = v!))),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            List<String> currentImages = parseImagesHelper(imagePathsJson);
+            
+            return AlertDialog(
+              backgroundColor: AppTheme.cardBlack,
+              title: Text(isEdit ? 'ویرایش فریم' : 'افزودن فریم جدید', style: const TextStyle(color: AppTheme.yellow)),
+              content: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(controller: nameController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام فریم *', prefixIcon: Icon(Icons.style, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  TextField(controller: brandController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'برند', prefixIcon: Icon(Icons.business, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  TextField(controller: modelController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'مدل', prefixIcon: Icon(Icons.category, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: TextField(controller: colorController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'رنگ', prefixIcon: Icon(Icons.color_lens, color: AppTheme.yellow)))),
+                    const SizedBox(width: 8),
+                    Expanded(child: DropdownButtonFormField<String>(value: material, dropdownColor: AppTheme.cardBlack, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'جنس', prefixIcon: Icon(Icons.build, color: AppTheme.yellow)), items: frameMaterials.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(), onChanged: (v) => setStateDialog(() => material = v!))),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextField(controller: sizeController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سایز (مثال: 52-18-140)', prefixIcon: Icon(Icons.straighten, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: TextField(controller: costController, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'قیمت خرید', prefixIcon: Icon(Icons.attach_money, color: AppTheme.yellow)))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: sellController, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'قیمت فروش', prefixIcon: Icon(Icons.attach_money, color: AppTheme.yellow)))),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextField(controller: stockController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'موجودی انبار', prefixIcon: Icon(Icons.inventory, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final List<XFile>? images = await _picker.pickMultiImage();
+                      if (images != null && images.isNotEmpty) {
+                        final saved = await savePickedImages(images);
+                        setStateDialog(() => currentImages = saved);
+                      }
+                    },
+                    icon: const Icon(Icons.image, color: AppTheme.yellow),
+                    label: const Text('انتخاب عکس (چندتایی)', style: TextStyle(color: AppTheme.textWhite)),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cardBlack, side: const BorderSide(color: AppTheme.yellow)),
+                  ),
+                  if (currentImages.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: currentImages.map((path) => GestureDetector(
+                        onTap: () => _showFullScreenImage(ctx, path),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 80, height: 80, child: Image.file(File(path), fit: BoxFit.cover))),
+                      )).toList(),
+                    ),
+                  ]
                 ]),
-                const SizedBox(height: 12),
-                TextField(controller: sizeController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سایز (مثال: 52-18-140)', prefixIcon: Icon(Icons.straighten, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: TextField(controller: costController, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'قیمت خرید', prefixIcon: Icon(Icons.attach_money, color: AppTheme.yellow)))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: sellController, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'قیمت فروش', prefixIcon: Icon(Icons.attach_money, color: AppTheme.yellow)))),
-                ]),
-                const SizedBox(height: 12),
-                TextField(controller: stockController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'موجودی انبار', prefixIcon: Icon(Icons.inventory, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف', style: TextStyle(color: AppTheme.textGrey))),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.yellow, foregroundColor: Colors.black),
                   onPressed: () async {
-                    final images = await _picker.pickMultiImage();
-                    if (images != null && images.isNotEmpty) {
-                      final saved = await savePickedImages(images);
-                      setStateDialog(() => imagePath = saved.join('|'));
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام فریم الزامی است'), backgroundColor: Colors.red));
+                      return;
+                    }
+                    try {
+                      final data = {
+                        'name': nameController.text.trim(), 'brand': brandController.text.trim(), 'model': modelController.text.trim(),
+                        'color': colorController.text.trim(), 'material': material, 'size': sizeController.text.trim(),
+                        'cost_price': double.tryParse(toEnglishDigits(costController.text.replaceAll(',', ''))) ?? 0,
+                        'sell_price': double.tryParse(toEnglishDigits(sellController.text.replaceAll(',', ''))) ?? 0,
+                        'stock_quantity': int.tryParse(toEnglishDigits(stockController.text)) ?? 0,
+                        'image_path': currentImages.isNotEmpty ? currentImages.join('|') : null, 
+                        'created_at': getCurrentJalaliDateTime(),
+                      };
+                      if (isEdit) { await DatabaseHelper.instance.updateFrame(item!['id'], data); } 
+                      else { await DatabaseHelper.instance.insertFrame(data); }
+                      Navigator.pop(ctx);
+                      _loadItems();
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red));
                     }
                   },
-                  icon: const Icon(Icons.image, color: AppTheme.yellow),
-                  label: const Text('انتخاب عکس', style: TextStyle(color: AppTheme.textWhite)),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cardBlack, side: const BorderSide(color: AppTheme.yellow)),
+                  child: Text(isEdit ? 'ذخیره' : 'افزودن', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              ]),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف', style: TextStyle(color: AppTheme.textGrey))),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.yellow, foregroundColor: Colors.black),
-                onPressed: () async {
-                  if (nameController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام فریم الزامی است'), backgroundColor: Colors.red));
-                    return;
-                  }
-                  final data = {
-                    'name': nameController.text.trim(), 'brand': brandController.text.trim(), 'model': modelController.text.trim(),
-                    'color': colorController.text.trim(), 'material': material, 'size': sizeController.text.trim(),
-                    'cost_price': double.tryParse(toEnglishDigits(costController.text.replaceAll(',', ''))) ?? 0,
-                    'sell_price': double.tryParse(toEnglishDigits(sellController.text.replaceAll(',', ''))) ?? 0,
-                    'stock_quantity': int.tryParse(toEnglishDigits(stockController.text)) ?? 0,
-                    'image_path': imagePath, 'created_at': getCurrentJalaliDateTime(),
-                  };
-                  if (isEdit) { await DatabaseHelper.instance.updateFrame(item!['id'], data); } 
-                  else { await DatabaseHelper.instance.insertFrame(data); }
-                  Navigator.pop(ctx);
-                  _loadItems();
-                },
-                child: Text(isEdit ? 'ذخیره' : 'افزودن', style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -144,15 +179,18 @@ class _FramesScreenState extends State<FramesScreen> {
               padding: const EdgeInsets.all(12), itemCount: _filtered.length,
               itemBuilder: (context, index) {
                 final i = _filtered[index];
-                final images = parseImagesHelper(i['image_path']);
+                final List<String> images = parseImagesHelper(i['image_path']);
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    leading: images.isNotEmpty ? ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 50, height: 50, child: Image.file(File(images.first), fit: BoxFit.cover))) : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.style, color: AppTheme.yellow)),
+                    leading: images.isNotEmpty 
+                        ? GestureDetector(onTap: () => _showFullScreenImage(context, images.first), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 50, height: 50, child: Image.file(File(images.first), fit: BoxFit.cover)))) 
+                        : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.style, color: AppTheme.yellow)),
                     title: Text(i['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
                     subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${i['brand'] ?? ''} | ${i['model'] ?? ''} | ${i['color'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
                       Text('موجودی: ${formatNumber(i['stock_quantity'] ?? 0)} | فروش: ${formatPrice(i['sell_price'])} تومان', style: const TextStyle(color: AppTheme.textYellow, fontSize: 12)),
+                      if (images.length > 1) Text('و ${toPersianDigits((images.length - 1).toString())} عکس دیگر', style: const TextStyle(color: AppTheme.textGrey, fontSize: 11, fontStyle: FontStyle.italic)),
                     ]),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showDialog(item: i)),

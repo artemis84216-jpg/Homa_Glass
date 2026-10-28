@@ -1,0 +1,59 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+      
+      - name: Create android folder
+        run: flutter create . --platforms android --project-name homa_glass --org com.homa
+      
+      - name: Change Application ID and App Name
+        run: |
+          sed -i 's/applicationId "com.example.homa_glass"/applicationId "com.homa.glass"/' android/app/build.gradle
+          sed -i 's/android:label="homa_glass"/android:label="Homa Glass"/' android/app/src/main/AndroidManifest.xml
+      
+      - name: Optimize Gradle Memory
+        run: |
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> android/gradle.properties
+          echo "org.gradle.parallel=true" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+      
+      - name: Patch Android Configurations
+        run: |
+          sed -i 's/compileSdk.*/compileSdk 34/' android/app/build.gradle
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle
+          sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
+          sed -i "s/ext\.kotlin_version.*/ext.kotlin_version = '1.9.24'/" android/build.gradle
+          sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>\n    <uses-permission android:name="android.permission.CAMERA"/>' android/app/src/main/AndroidManifest.xml
+
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+      
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

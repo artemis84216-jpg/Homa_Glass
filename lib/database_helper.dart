@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'dart:io';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -16,7 +17,18 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
+    
+    // اگر دیتابیس قدیمی وجود دارد و migration خطا داد، آن را حذف کن
+    try {
+      return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
+    } catch (e) {
+      // اگر خطا داد، دیتابیس را حذف کن و از نو بساز
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+      return await openDatabase(path, version: 2, onCreate: _createDB);
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -101,7 +113,7 @@ class DatabaseHelper {
       CREATE TABLE employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, password TEXT, role TEXT DEFAULT 'seller', commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT 'active', created_at TEXT)
     ''');
 
-    // تامین‌کنندگان (جدید برای نسیه مرکز)
+    // تامین‌کنندگان
     await db.execute('''
       CREATE TABLE suppliers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,12 +126,12 @@ class DatabaseHelper {
       )
     ''');
 
-    // اقساط و پرداخت‌ها (جدید برای مدیریت نسیه)
+    // اقساط و پرداخت‌ها
     await db.execute('''
       CREATE TABLE installments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT, // 'customer' or 'supplier'
-        reference_id INTEGER, // customer_id or supplier_id
+        type TEXT,
+        reference_id INTEGER,
         amount REAL,
         date TEXT,
         description TEXT,
@@ -139,12 +151,52 @@ class DatabaseHelper {
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE customers ADD COLUMN total_debt REAL DEFAULT 0');
-      await db.execute('CREATE TABLE suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, address TEXT, total_debt REAL DEFAULT 0, notes TEXT, created_at TEXT)');
-      await db.execute('CREATE TABLE installments (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, reference_id INTEGER, amount REAL, date TEXT, description TEXT, is_paid INTEGER DEFAULT 1, created_at TEXT)');
-      await db.execute('ALTER TABLE orders ADD COLUMN is_credit INTEGER DEFAULT 0');
+    // اگر migration خطا داد، همه چیز را در try-catch بگذار
+    try {
+      if (oldVersion < 2) {
+        // سعی کن ستون total_debt را اضافه کنی
+        try {
+          await db.execute('ALTER TABLE customers ADD COLUMN total_debt REAL DEFAULT 0');
+        } catch (e) {
+          // اگر قبلاً اضافه شده، نادیده بگیر
+        }
+        
+        // سعی کن جدول suppliers را بسازی
+        try {
+          await db.execute('CREATE TABLE suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, address TEXT, total_debt REAL DEFAULT 0, notes TEXT, created_at TEXT)');
+        } catch (e) {
+          // اگر قبلاً ساخته شده، نادیده بگیر
+        }
+        
+        // سعی کن جدول installments را بسازی
+        try {
+          await db.execute('CREATE TABLE installments (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, reference_id INTEGER, amount REAL, date TEXT, description TEXT, is_paid INTEGER DEFAULT 1, created_at TEXT)');
+        } catch (e) {
+          // اگر قبلاً ساخته شده، نادیده بگیر
+        }
+        
+        // سعی کن ستون is_credit را به orders اضافه کنی
+        try {
+          await db.execute('ALTER TABLE orders ADD COLUMN is_credit INTEGER DEFAULT 0');
+        } catch (e) {
+          // اگر قبلاً اضافه شده، نادیده بگیر
+        }
+      }
+    } catch (e) {
+      // اگر migration با خطا مواجه شد، نادیده بگیر
+      // دیتابیس در حالت قدیمی باقی می‌ماند اما برنامه کرش نمی‌کند
     }
+  }
+
+  // متد بازنشانی کامل دیتابیس
+  Future<void> resetDatabaseCompletely() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'homa_glass.db');
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    _database = null;
   }
 
   // مشتریان

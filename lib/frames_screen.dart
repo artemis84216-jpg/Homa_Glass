@@ -23,8 +23,19 @@ class _FramesScreenState extends State<FramesScreen> {
 
   Future<void> _loadItems() async {
     setState(() => _isLoading = true);
-    final data = await DatabaseHelper.instance.getAllFrames();
-    setState(() { _items = data; _filtered = data; _isLoading = false; });
+    try {
+      final data = await DatabaseHelper.instance.getAllFrames();
+      if (mounted) {
+        setState(() { _items = data; _filtered = data; _isLoading = false; });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطا در بارگذاری: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _filter(String query) {
@@ -37,6 +48,13 @@ class _FramesScreenState extends State<FramesScreen> {
   }
 
   void _showFullScreenImage(BuildContext context, String imagePath) {
+    final file = File(imagePath);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('فایل عکس یافت نشد'), backgroundColor: Colors.red),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -45,7 +63,7 @@ class _FramesScreenState extends State<FramesScreen> {
           onTap: () => Navigator.pop(ctx),
           child: InteractiveViewer(
             panEnabled: true, boundaryMargin: const EdgeInsets.all(20), minScale: 0.5, maxScale: 4.0,
-            child: Image.file(File(imagePath), fit: BoxFit.contain),
+            child: Image.file(file, fit: BoxFit.contain),
           ),
         ),
       ),
@@ -105,7 +123,10 @@ class _FramesScreenState extends State<FramesScreen> {
                       final List<XFile>? images = await _picker.pickMultiImage();
                       if (images != null && images.isNotEmpty) {
                         final saved = await savePickedImages(images);
-                        setStateDialog(() => currentImages = saved);
+                        setStateDialog(() {
+                          currentImages = saved;
+                          imagePathsJson = saved.join('|');
+                        });
                       }
                     },
                     icon: const Icon(Icons.image, color: AppTheme.yellow),
@@ -118,7 +139,13 @@ class _FramesScreenState extends State<FramesScreen> {
                       spacing: 8, runSpacing: 8,
                       children: currentImages.map((path) => GestureDetector(
                         onTap: () => _showFullScreenImage(ctx, path),
-                        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 80, height: 80, child: Image.file(File(path), fit: BoxFit.cover))),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: 80, height: 80,
+                            child: Image.file(File(path), fit: BoxFit.cover),
+                          ),
+                        ),
                       )).toList(),
                     ),
                   ]
@@ -135,16 +162,23 @@ class _FramesScreenState extends State<FramesScreen> {
                     }
                     try {
                       final data = {
-                        'name': nameController.text.trim(), 'brand': brandController.text.trim(), 'model': modelController.text.trim(),
-                        'color': colorController.text.trim(), 'material': material, 'size': sizeController.text.trim(),
+                        'name': nameController.text.trim(), 
+                        'brand': brandController.text.trim(), 
+                        'model': modelController.text.trim(),
+                        'color': colorController.text.trim(), 
+                        'material': material, 
+                        'size': sizeController.text.trim(),
                         'cost_price': double.tryParse(toEnglishDigits(costController.text.replaceAll(',', ''))) ?? 0,
                         'sell_price': double.tryParse(toEnglishDigits(sellController.text.replaceAll(',', ''))) ?? 0,
                         'stock_quantity': int.tryParse(toEnglishDigits(stockController.text)) ?? 0,
                         'image_path': currentImages.isNotEmpty ? currentImages.join('|') : null, 
                         'created_at': getCurrentJalaliDateTime(),
                       };
-                      if (isEdit) { await DatabaseHelper.instance.updateFrame(item!['id'], data); } 
-                      else { await DatabaseHelper.instance.insertFrame(data); }
+                      if (isEdit) { 
+                        await DatabaseHelper.instance.updateFrame(item!['id'], data); 
+                      } else { 
+                        await DatabaseHelper.instance.insertFrame(data); 
+                      }
                       Navigator.pop(ctx);
                       _loadItems();
                     } catch (e) {
@@ -184,7 +218,16 @@ class _FramesScreenState extends State<FramesScreen> {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: images.isNotEmpty 
-                        ? GestureDetector(onTap: () => _showFullScreenImage(context, images.first), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 50, height: 50, child: Image.file(File(images.first), fit: BoxFit.cover)))) 
+                        ? GestureDetector(
+                            onTap: () => _showFullScreenImage(context, images.first),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 50, height: 50,
+                                child: Image.file(File(images.first), fit: BoxFit.cover),
+                              ),
+                            ),
+                          ) 
                         : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.style, color: AppTheme.yellow)),
                     title: Text(i['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
                     subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

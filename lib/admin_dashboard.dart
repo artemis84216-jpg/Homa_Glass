@@ -96,7 +96,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 children: [
                   _buildCard(Icons.people, 'مشتریان', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen()))),
                   _buildCard(Icons.visibility, 'معاینات چشم', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EyeExamsScreen()))),
-                  _buildCard(Icons.glasses, 'فریم‌ها', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FramesScreen()))),
+                  _buildCard(Icons.style, 'فریم‌ها', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FramesScreen()))), // اصلاح: استفاده از Icons.style
                   _buildCard(Icons.lens_blur, 'عدسی‌ها', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LensesScreen()))),
                   _buildCard(Icons.wb_sunny, 'عینک آفتابی', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SunglassesScreen()))),
                   _buildCard(Icons.receipt_long, 'سفارشات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()))),

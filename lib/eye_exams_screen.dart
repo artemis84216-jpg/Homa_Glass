@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
 
 class EyeExamsScreen extends StatefulWidget {
   const EyeExamsScreen({super.key});
+
   @override
   State<EyeExamsScreen> createState() => _EyeExamsScreenState();
 }
@@ -17,27 +19,76 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
   final _searchController = TextEditingController();
 
   @override
-  void initState() { super.initState(); _loadData(); }
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final exams = await DatabaseHelper.instance.getAllEyeExams();
     final customers = await DatabaseHelper.instance.getAllCustomers();
-    setState(() { _exams = exams; _filtered = exams; _customers = customers; _isLoading = false; });
+    setState(() {
+      _exams = exams;
+      _filtered = exams;
+      _customers = customers;
+      _isLoading = false;
+    });
   }
 
   void _filter(String query) {
     setState(() {
-      if (query.isEmpty) { _filtered = _exams; } 
-      else {
-        _filtered = _exams.where((e) => (e['customer_name'] ?? '').toLowerCase().contains(query.toLowerCase()) || (e['doctor_name'] ?? '').toLowerCase().contains(query.toLowerCase())).toList();
+      if (query.isEmpty) {
+        _filtered = _exams;
+      } else {
+        _filtered = _exams.where((e) => 
+          (e['customer_name'] ?? '').toLowerCase().contains(query.toLowerCase()) || 
+          (e['doctor_name'] ?? '').toLowerCase().contains(query.toLowerCase())
+        ).toList();
       }
     });
   }
 
+  // تابع ارسال نسخه از طریق پیامک
+  Future<void> _sendPrescriptionSms(Map<String, dynamic> exam) async {
+    final customerPhone = exam['customer_phone']?.toString() ?? '';
+    if (customerPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('شماره تماس مشتری ثبت نشده است'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('نسخه عینک شما - Homa Glass');
+    buffer.writeln('تاریخ معاینه: ${exam['exam_date'] ?? '-'}');
+    buffer.writeln('-------------------');
+    buffer.writeln('👁️ چشم راست (OD):');
+    buffer.writeln('SPH: ${exam['sph_right']} | CYL: ${exam['cyl_right']} | AXIS: ${exam['axis_right']} | ADD: ${exam['add_right']}');
+    buffer.writeln('👁️ چشم چپ (OS):');
+    buffer.writeln('SPH: ${exam['sph_left']} | CYL: ${exam['cyl_left']} | AXIS: ${exam['axis_left']} | ADD: ${exam['add_left']}');
+    buffer.writeln('📏 فاصله مردمک (PD): ${exam['pd']}');
+    buffer.writeln('👓 نوع دید: ${exam['vision_type']} | نوع عینک: ${exam['glasses_type']}');
+    buffer.writeln('-------------------');
+    buffer.writeln('با احترام، مرکز عینک هما');
+
+    final smsBody = Uri.encodeComponent(buffer.toString());
+    final smsUri = Uri.parse('sms:$customerPhone?body=$smsBody');
+
+    if (await canLaunchUrl(smsUri)) {
+      await launchUrl(smsUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('امکان باز کردن برنامه پیامک وجود ندارد'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   Future<void> _showExamDialog({Map<String, dynamic>? exam}) async {
     final isEdit = exam != null;
-    int? selectedCustomerId = isEdit ? (exam!['customer_id'] as int?) : (_customers.isNotEmpty ? (_customers.first['id'] as int?) : null);
+    int? selectedCustomerId = isEdit 
+        ? (exam!['customer_id'] as int?) 
+        : (_customers.isNotEmpty ? (_customers.first['id'] as int?) : null);
     
     final doctorController = TextEditingController(text: exam?['doctor_name']?.toString() ?? '');
     final sphRController = TextEditingController(text: (exam?['sph_right'] ?? 0).toString());
@@ -83,9 +134,25 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
                 TextField(controller: doctorController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام پزشک / اپتومتریست', prefixIcon: Icon(Icons.medical_services, color: AppTheme.yellow))),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: OutlinedButton.icon(onPressed: () async { final p = await showPersianDatePicker(context: ctx, initialDate: examDate, firstDate: Jalali(1400), lastDate: Jalali(1450)); if (p != null) setStateDialog(() => examDate = p); }, icon: const Icon(Icons.calendar_today, color: AppTheme.yellow, size: 18), label: Text('معاینه: ${examDate.year}/${examDate.month}/${examDate.day}', style: const TextStyle(color: AppTheme.textWhite, fontSize: 11)), style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.yellow)))),
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: () async { 
+                      final p = await showPersianDatePicker(context: ctx, initialDate: examDate, firstDate: Jalali(1400), lastDate: Jalali(1450)); 
+                      if (p != null) setStateDialog(() => examDate = p); 
+                    }, 
+                    icon: const Icon(Icons.calendar_today, color: AppTheme.yellow, size: 18), 
+                    label: Text('معاینه: ${examDate.year}/${examDate.month}/${examDate.day}', style: const TextStyle(color: AppTheme.textWhite, fontSize: 11)), 
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.yellow))
+                  )),
                   const SizedBox(width: 8),
-                  Expanded(child: OutlinedButton.icon(onPressed: () async { final p = await showPersianDatePicker(context: ctx, initialDate: nextExamDate, firstDate: Jalali(1400), lastDate: Jalali(1450)); if (p != null) setStateDialog(() => nextExamDate = p); }, icon: const Icon(Icons.event_available, color: AppTheme.green, size: 18), label: Text('بعدی: ${nextExamDate.year}/${nextExamDate.month}/${nextExamDate.day}', style: const TextStyle(color: AppTheme.textWhite, fontSize: 11)), style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.green)))),
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: () async { 
+                      final p = await showPersianDatePicker(context: ctx, initialDate: nextExamDate, firstDate: Jalali(1400), lastDate: Jalali(1450)); 
+                      if (p != null) setStateDialog(() => nextExamDate = p); 
+                    }, 
+                    icon: const Icon(Icons.event_available, color: AppTheme.green, size: 18), 
+                    label: Text('بعدی: ${nextExamDate.year}/${nextExamDate.month}/${nextExamDate.day}', style: const TextStyle(color: AppTheme.textWhite, fontSize: 11)), 
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.green))
+                  )),
                 ]),
                 const SizedBox(height: 16),
                 const Text('چشم راست (OD)', style: TextStyle(color: AppTheme.yellow, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -134,7 +201,7 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
                     value: glassesType,
                     dropdownColor: AppTheme.cardBlack,
                     style: const TextStyle(color: AppTheme.textWhite),
-                    decoration: const InputDecoration(labelText: 'نوع عینک', prefixIcon: Icon(Icons.style, color: AppTheme.yellow)), // اصلاح: Icons.style جایگزین Icons.glasses
+                    decoration: const InputDecoration(labelText: 'نوع عینک', prefixIcon: Icon(Icons.style, color: AppTheme.yellow)),
                     items: const [
                       DropdownMenuItem(value: 'single', child: Text('تک‌کانونی')),
                       DropdownMenuItem(value: 'bifocal', child: Text('دوکانونی')),
@@ -157,29 +224,36 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لطفاً یک مشتری انتخاب کنید'), backgroundColor: Colors.red));
                     return;
                   }
-                  final data = {
-                    'customer_id': selectedCustomerId,
-                    'doctor_name': doctorController.text.trim(),
-                    'exam_date': '${examDate.year}/${examDate.month.toString().padLeft(2, '0')}/${examDate.day.toString().padLeft(2, '0')}',
-                    'next_exam_date': '${nextExamDate.year}/${nextExamDate.month.toString().padLeft(2, '0')}/${nextExamDate.day.toString().padLeft(2, '0')}',
-                    'sph_right': double.tryParse(toEnglishDigits(sphRController.text)) ?? 0,
-                    'cyl_right': double.tryParse(toEnglishDigits(cylRController.text)) ?? 0,
-                    'axis_right': int.tryParse(toEnglishDigits(axisRController.text)) ?? 0,
-                    'add_right': double.tryParse(toEnglishDigits(addRController.text)) ?? 0,
-                    'sph_left': double.tryParse(toEnglishDigits(sphLController.text)) ?? 0,
-                    'cyl_left': double.tryParse(toEnglishDigits(cylLController.text)) ?? 0,
-                    'axis_left': int.tryParse(toEnglishDigits(axisLController.text)) ?? 0,
-                    'add_left': double.tryParse(toEnglishDigits(addLController.text)) ?? 0,
-                    'pd': double.tryParse(toEnglishDigits(pdController.text)) ?? 0,
-                    'vision_type': visionType,
-                    'glasses_type': glassesType,
-                    'notes': notesController.text.trim(),
-                    'created_at': getCurrentJalaliDateTime(),
-                  };
-                  if (isEdit) { await DatabaseHelper.instance.updateEyeExam(exam!['id'], data); } 
-                  else { await DatabaseHelper.instance.insertEyeExam(data); }
-                  Navigator.pop(ctx);
-                  _loadData();
+                  try {
+                    final data = {
+                      'customer_id': selectedCustomerId,
+                      'doctor_name': doctorController.text.trim(),
+                      'exam_date': '${examDate.year}/${examDate.month.toString().padLeft(2, '0')}/${examDate.day.toString().padLeft(2, '0')}',
+                      'next_exam_date': '${nextExamDate.year}/${nextExamDate.month.toString().padLeft(2, '0')}/${nextExamDate.day.toString().padLeft(2, '0')}',
+                      'sph_right': double.tryParse(toEnglishDigits(sphRController.text)) ?? 0,
+                      'cyl_right': double.tryParse(toEnglishDigits(cylRController.text)) ?? 0,
+                      'axis_right': int.tryParse(toEnglishDigits(axisRController.text)) ?? 0,
+                      'add_right': double.tryParse(toEnglishDigits(addRController.text)) ?? 0,
+                      'sph_left': double.tryParse(toEnglishDigits(sphLController.text)) ?? 0,
+                      'cyl_left': double.tryParse(toEnglishDigits(cylLController.text)) ?? 0,
+                      'axis_left': int.tryParse(toEnglishDigits(axisLController.text)) ?? 0,
+                      'add_left': double.tryParse(toEnglishDigits(addLController.text)) ?? 0,
+                      'pd': double.tryParse(toEnglishDigits(pdController.text)) ?? 0,
+                      'vision_type': visionType,
+                      'glasses_type': glassesType,
+                      'notes': notesController.text.trim(),
+                      'created_at': getCurrentJalaliDateTime(),
+                    };
+                    if (isEdit) { 
+                      await DatabaseHelper.instance.updateEyeExam(exam!['id'], data); 
+                    } else { 
+                      await DatabaseHelper.instance.insertEyeExam(data); 
+                    }
+                    Navigator.pop(ctx);
+                    _loadData();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا در ذخیره: $e'), backgroundColor: Colors.red));
+                  }
                 },
                 child: Text(isEdit ? 'ذخیره' : 'ثبت معاینه', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
@@ -194,7 +268,9 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
     try {
       final parts = dateStr.split('/');
       return Jalali(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
-    } catch (e) { return null; }
+    } catch (e) { 
+      return null; 
+    }
   }
 
   Future<void> _deleteExam(int id) async {
@@ -213,21 +289,36 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
         ),
       ),
     );
-    if (confirm == true) { await DatabaseHelper.instance.deleteEyeExam(id); _loadData(); }
+    if (confirm == true) { 
+      await DatabaseHelper.instance.deleteEyeExam(id); 
+      _loadData(); 
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(title: const Text('معاینات چشم'), centerTitle: true, actions: [IconButton(icon: const Icon(Icons.refresh, color: AppTheme.yellow), onPressed: _loadData)]),
+      appBar: AppBar(
+        title: const Text('معاینات چشم'), 
+        centerTitle: true, 
+        actions: [IconButton(icon: const Icon(Icons.refresh, color: AppTheme.yellow), onPressed: _loadData)]
+      ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
-              controller: _searchController, style: const TextStyle(color: AppTheme.textWhite),
-              decoration: InputDecoration(hintText: 'جستجو بر اساس نام مشتری یا پزشک...', prefixIcon: const Icon(Icons.search, color: AppTheme.yellow), suffixIcon: _searchController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.yellow), onPressed: () { _searchController.clear(); _filter(''); }) : null, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              controller: _searchController, 
+              style: const TextStyle(color: AppTheme.textWhite),
+              decoration: InputDecoration(
+                hintText: 'جستجو بر اساس نام مشتری یا پزشک...', 
+                prefixIcon: const Icon(Icons.search, color: AppTheme.yellow), 
+                suffixIcon: _searchController.text.isNotEmpty 
+                    ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.yellow), onPressed: () { _searchController.clear(); _filter(''); }) 
+                    : null, 
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))
+              ),
               onChanged: _filter,
             ),
           ),
@@ -235,7 +326,11 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppTheme.yellow))
                 : _filtered.isEmpty
-                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.visibility, size: 80, color: AppTheme.textGrey), const SizedBox(height: 16), Text('معاینه‌ای ثبت نشده', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))]))
+                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(Icons.visibility, size: 80, color: AppTheme.textGrey), 
+                        const SizedBox(height: 16), 
+                        Text('معاینه‌ای ثبت نشده', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))
+                      ]))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: _filtered.length,
@@ -256,6 +351,12 @@ class _EyeExamsScreenState extends State<EyeExamsScreen> {
                                 ],
                               ),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                                // دکمه جدید ارسال پیامک
+                                IconButton(
+                                  icon: const Icon(Icons.sms, color: AppTheme.yellow), 
+                                  tooltip: 'ارسال نسخه با پیامک', 
+                                  onPressed: () => _sendPrescriptionSms(e)
+                                ),
                                 IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showExamDialog(exam: e)),
                                 IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteExam(e['id'])),
                               ]),

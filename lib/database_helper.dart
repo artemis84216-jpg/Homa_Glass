@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -32,6 +32,7 @@ class DatabaseHelper {
         gender TEXT DEFAULT 'male',
         job TEXT,
         medical_history TEXT,
+        total_debt REAL DEFAULT 0,
         notes TEXT,
         created_at TEXT
       )
@@ -45,14 +46,8 @@ class DatabaseHelper {
         doctor_name TEXT,
         exam_date TEXT,
         next_exam_date TEXT,
-        sph_right REAL DEFAULT 0,
-        cyl_right REAL DEFAULT 0,
-        axis_right INTEGER DEFAULT 0,
-        add_right REAL DEFAULT 0,
-        sph_left REAL DEFAULT 0,
-        cyl_left REAL DEFAULT 0,
-        axis_left INTEGER DEFAULT 0,
-        add_left REAL DEFAULT 0,
+        sph_right REAL DEFAULT 0, cyl_right REAL DEFAULT 0, axis_right INTEGER DEFAULT 0, add_right REAL DEFAULT 0,
+        sph_left REAL DEFAULT 0, cyl_left REAL DEFAULT 0, axis_left INTEGER DEFAULT 0, add_left REAL DEFAULT 0,
         pd REAL DEFAULT 0,
         vision_type TEXT,
         glasses_type TEXT,
@@ -63,68 +58,22 @@ class DatabaseHelper {
 
     // فریم‌ها
     await db.execute('''
-      CREATE TABLE frames (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        brand TEXT,
-        model TEXT,
-        color TEXT,
-        material TEXT,
-        size TEXT,
-        cost_price REAL DEFAULT 0,
-        sell_price REAL DEFAULT 0,
-        stock_quantity INTEGER DEFAULT 0,
-        image_path TEXT,
-        created_at TEXT
-      )
+      CREATE TABLE frames (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, brand TEXT, model TEXT, color TEXT, material TEXT, size TEXT, cost_price REAL DEFAULT 0, sell_price REAL DEFAULT 0, stock_quantity INTEGER DEFAULT 0, image_path TEXT, created_at TEXT)
     ''');
 
     // عدسی‌ها
     await db.execute('''
-      CREATE TABLE lenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT,
-        features TEXT,
-        brand TEXT,
-        lens_index TEXT,
-        cost_price REAL DEFAULT 0,
-        sell_price REAL DEFAULT 0,
-        stock_quantity INTEGER DEFAULT 0,
-        created_at TEXT
-      )
+      CREATE TABLE lenses (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, features TEXT, brand TEXT, lens_index TEXT, cost_price REAL DEFAULT 0, sell_price REAL DEFAULT 0, stock_quantity INTEGER DEFAULT 0, created_at TEXT)
     ''');
 
     // عینک‌های آفتابی
     await db.execute('''
-      CREATE TABLE sunglasses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        brand TEXT,
-        model TEXT,
-        color TEXT,
-        uv_protection TEXT,
-        cost_price REAL DEFAULT 0,
-        sell_price REAL DEFAULT 0,
-        stock_quantity INTEGER DEFAULT 0,
-        image_path TEXT,
-        created_at TEXT
-      )
+      CREATE TABLE sunglasses (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, brand TEXT, model TEXT, color TEXT, uv_protection TEXT, cost_price REAL DEFAULT 0, sell_price REAL DEFAULT 0, stock_quantity INTEGER DEFAULT 0, image_path TEXT, created_at TEXT)
     ''');
 
     // لنزهای تماسی
     await db.execute('''
-      CREATE TABLE contact_lenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        brand TEXT,
-        type TEXT,
-        power REAL DEFAULT 0,
-        cost_price REAL DEFAULT 0,
-        sell_price REAL DEFAULT 0,
-        stock_quantity INTEGER DEFAULT 0,
-        created_at TEXT
-      )
+      CREATE TABLE contact_lenses (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, brand TEXT, type TEXT, power REAL DEFAULT 0, cost_price REAL DEFAULT 0, sell_price REAL DEFAULT 0, stock_quantity INTEGER DEFAULT 0, created_at TEXT)
     ''');
 
     // سفارشات
@@ -137,82 +86,65 @@ class DatabaseHelper {
         order_date TEXT,
         delivery_date TEXT,
         status TEXT DEFAULT 'pending',
-        frame_id INTEGER,
-        lens_id INTEGER,
-        sph_right REAL DEFAULT 0,
-        cyl_right REAL DEFAULT 0,
-        axis_right INTEGER DEFAULT 0,
-        sph_left REAL DEFAULT 0,
-        cyl_left REAL DEFAULT 0,
-        axis_left INTEGER DEFAULT 0,
-        add_value REAL DEFAULT 0,
-        pd REAL DEFAULT 0,
-        subtotal REAL DEFAULT 0,
-        discount REAL DEFAULT 0,
-        total REAL DEFAULT 0,
-        warranty_date TEXT,
-        notes TEXT,
-        created_at TEXT
+        frame_id INTEGER, lens_id INTEGER,
+        sph_right REAL DEFAULT 0, cyl_right REAL DEFAULT 0, axis_right INTEGER DEFAULT 0,
+        sph_left REAL DEFAULT 0, cyl_left REAL DEFAULT 0, axis_left INTEGER DEFAULT 0,
+        add_value REAL DEFAULT 0, pd REAL DEFAULT 0,
+        subtotal REAL DEFAULT 0, discount REAL DEFAULT 0, total REAL DEFAULT 0,
+        is_credit INTEGER DEFAULT 0,
+        warranty_date TEXT, notes TEXT, created_at TEXT
       )
     ''');
 
     // کارمندان
     await db.execute('''
-      CREATE TABLE employees (
+      CREATE TABLE employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, password TEXT, role TEXT DEFAULT 'seller', commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT 'active', created_at TEXT)
+    ''');
+
+    // تامین‌کنندگان (جدید برای نسیه مرکز)
+    await db.execute('''
+      CREATE TABLE suppliers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         phone TEXT,
-        password TEXT,
-        role TEXT DEFAULT 'seller',
-        commission_rate REAL DEFAULT 0.0,
-        base_salary REAL DEFAULT 0.0,
-        status TEXT DEFAULT 'active',
+        address TEXT,
+        total_debt REAL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT
+      )
+    ''');
+
+    // اقساط و پرداخت‌ها (جدید برای مدیریت نسیه)
+    await db.execute('''
+      CREATE TABLE installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT, // 'customer' or 'supplier'
+        reference_id INTEGER, // customer_id or supplier_id
+        amount REAL,
+        date TEXT,
+        description TEXT,
+        is_paid INTEGER DEFAULT 1,
         created_at TEXT
       )
     ''');
 
     // هزینه‌ها
-    await db.execute('''
-      CREATE TABLE expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category TEXT,
-        amount REAL,
-        date TEXT,
-        description TEXT,
-        created_at TEXT
-      )
-    ''');
-
+    await db.execute('CREATE TABLE expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT, amount REAL, date TEXT, description TEXT, created_at TEXT)');
     await db.execute('CREATE TABLE expense_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)');
     await db.execute('INSERT INTO expense_categories (name) VALUES ("خرید کالا"), ("حقوق"), ("اجاره"), ("قبوض"), ("تعمیرات"), ("تبلیغات"), ("سایر")');
 
     // پلن‌ها و لایسنس
-    await db.execute('''
-      CREATE TABLE plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        duration_value INTEGER NOT NULL,
-        duration_type TEXT DEFAULT "months",
-        price REAL NOT NULL,
-        max_employees INTEGER NOT NULL,
-        max_customers INTEGER NOT NULL,
-        is_active INTEGER DEFAULT 1,
-        created_at TEXT
-      )
-    ''');
+    await db.execute('CREATE TABLE plans (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL, duration_type TEXT DEFAULT "months", price REAL NOT NULL, max_employees INTEGER NOT NULL, max_customers INTEGER NOT NULL, is_active INTEGER DEFAULT 1, created_at TEXT)');
+    await db.execute('CREATE TABLE licenses (id INTEGER PRIMARY KEY AUTOINCREMENT, shop_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL, plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TEXT)');
+  }
 
-    await db.execute('''
-      CREATE TABLE licenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        shop_name TEXT NOT NULL,
-        device_id TEXT NOT NULL,
-        license_code TEXT NOT NULL,
-        plan_id INTEGER NOT NULL,
-        plan_name TEXT NOT NULL,
-        expiry_date TEXT NOT NULL,
-        issued_at TEXT
-      )
-    ''');
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE customers ADD COLUMN total_debt REAL DEFAULT 0');
+      await db.execute('CREATE TABLE suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, address TEXT, total_debt REAL DEFAULT 0, notes TEXT, created_at TEXT)');
+      await db.execute('CREATE TABLE installments (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, reference_id INTEGER, amount REAL, date TEXT, description TEXT, is_paid INTEGER DEFAULT 1, created_at TEXT)');
+      await db.execute('ALTER TABLE orders ADD COLUMN is_credit INTEGER DEFAULT 0');
+    }
   }
 
   // مشتریان
@@ -265,6 +197,19 @@ class DatabaseHelper {
   Future<int> updateEmployee(int id, Map<String, dynamic> e) async { final db = await instance.database; return await db.update('employees', e, where: 'id = ?', whereArgs: [id]); }
   Future<int> deleteEmployee(int id) async { final db = await instance.database; return await db.delete('employees', where: 'id = ?', whereArgs: [id]); }
 
+  // تامین‌کنندگان
+  Future<int> insertSupplier(Map<String, dynamic> s) async { final db = await instance.database; return await db.insert('suppliers', s); }
+  Future<List<Map<String, dynamic>>> getAllSuppliers() async { final db = await instance.database; return await db.query('suppliers', orderBy: 'id DESC'); }
+  Future<int> updateSupplier(int id, Map<String, dynamic> s) async { final db = await instance.database; return await db.update('suppliers', s, where: 'id = ?', whereArgs: [id]); }
+  Future<int> deleteSupplier(int id) async { final db = await instance.database; return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]); }
+
+  // اقساط و پرداخت‌ها
+  Future<int> insertInstallment(Map<String, dynamic> i) async { final db = await instance.database; return await db.insert('installments', i); }
+  Future<List<Map<String, dynamic>>> getInstallmentsByReference(String type, int refId) async { 
+    final db = await instance.database; 
+    return await db.query('installments', where: 'type = ? AND reference_id = ?', whereArgs: [type, refId], orderBy: 'id DESC'); 
+  }
+
   // هزینه‌ها
   Future<List<Map<String, dynamic>>> getExpenseCategories() async { final db = await instance.database; return await db.query('expense_categories', orderBy: 'name ASC'); }
   Future<List<Map<String, dynamic>>> getExpenses({String? startDate, String? endDate}) async {
@@ -277,11 +222,9 @@ class DatabaseHelper {
   Future<int> insertExpense(Map<String, dynamic> e) async { final db = await instance.database; return await db.insert('expenses', e); }
   Future<int> deleteExpense(int id) async { final db = await instance.database; return await db.delete('expenses', where: 'id = ?', whereArgs: [id]); }
 
-  // پلن‌ها
+  // پلن‌ها و لایسنس
   Future<List<Map<String, dynamic>>> getAllPlans() async { final db = await instance.database; return await db.query('plans', orderBy: 'duration_value ASC'); }
   Future<int> insertPlan(Map<String, dynamic> p) async { final db = await instance.database; return await db.insert('plans', p); }
-
-  // لایسنس
   Future<int> insertLicense(Map<String, dynamic> l) async { final db = await instance.database; return await db.insert('licenses', l); }
   Future<List<Map<String, dynamic>>> getAllLicenses() async { final db = await instance.database; return await db.query('licenses', orderBy: 'id DESC'); }
 
@@ -289,7 +232,7 @@ class DatabaseHelper {
     final db = await instance.database;
     await db.delete('customers'); await db.delete('eye_exams'); await db.delete('frames');
     await db.delete('lenses'); await db.delete('sunglasses'); await db.delete('contact_lenses');
-    await db.delete('orders'); await db.delete('employees'); await db.delete('expenses');
-    await db.delete('plans'); await db.delete('licenses');
+    await db.delete('orders'); await db.delete('employees'); await db.delete('suppliers');
+    await db.delete('installments'); await db.delete('expenses'); await db.delete('plans'); await db.delete('licenses');
   }
 }

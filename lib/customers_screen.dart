@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
 
@@ -21,14 +20,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Future<void> _loadCustomers() async {
     setState(() => _isLoading = true);
     final data = await DatabaseHelper.instance.getAllCustomers();
-    setState(() { _customers = data; _filtered = data; _isLoading = false; });
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ لیست بروزرسانی شد'), backgroundColor: AppTheme.yellow));
+    setState(() { 
+      _customers = data; 
+      _filtered = data; 
+      _isLoading = false; 
+    });
   }
 
   void _filter(String query) {
     setState(() {
-      if (query.isEmpty) { _filtered = _customers; } 
-      else {
+      if (query.isEmpty) { 
+        _filtered = _customers; 
+      } else {
         _filtered = _customers.where((c) => 
           (c['name'] ?? '').toLowerCase().contains(query.toLowerCase()) || 
           (c['phone'] ?? '').contains(query) || 
@@ -50,10 +53,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
     await showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: StatefulBuilder(
-          builder: (ctx, setStateDialog) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
             backgroundColor: AppTheme.cardBlack,
             title: Text(isEdit ? 'ویرایش مشتری' : 'افزودن مشتری جدید', style: const TextStyle(color: AppTheme.yellow)),
             content: SingleChildScrollView(
@@ -65,15 +68,23 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 TextField(controller: nationalIdController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'کد ملی', prefixIcon: Icon(Icons.badge, color: AppTheme.yellow))),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: RadioListTile<String>(title: const Text('آقا', style: TextStyle(color: AppTheme.textWhite, fontSize: 12)), value: 'male', groupValue: gender, onChanged: (v) => setStateDialog(() => gender = v!))),
-                  Expanded(child: RadioListTile<String>(title: const Text('خانم', style: TextStyle(color: AppTheme.textWhite, fontSize: 12)), value: 'female', groupValue: gender, onChanged: (v) => setStateDialog(() => gender = v!))),
+                  Expanded(child: RadioListTile<String>(
+                    title: const Text('آقا', style: TextStyle(color: AppTheme.textWhite, fontSize: 12)), 
+                    value: 'male', groupValue: gender, 
+                    onChanged: (v) => setStateDialog(() => gender = v!)
+                  )),
+                  Expanded(child: RadioListTile<String>(
+                    title: const Text('خانم', style: TextStyle(color: AppTheme.textWhite, fontSize: 12)), 
+                    value: 'female', groupValue: gender, 
+                    onChanged: (v) => setStateDialog(() => gender = v!)
+                  )),
                 ]),
                 const SizedBox(height: 12),
                 TextField(controller: addressController, maxLines: 2, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'آدرس', prefixIcon: Icon(Icons.location_on, color: AppTheme.yellow))),
                 const SizedBox(height: 12),
                 TextField(controller: jobController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'شغل', prefixIcon: Icon(Icons.work, color: AppTheme.yellow))),
                 const SizedBox(height: 12),
-                TextField(controller: medicalController, maxLines: 2, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سوابق پزشکی (دیابت، فشار خون و...)', prefixIcon: Icon(Icons.medical_services, color: AppTheme.yellow))),
+                TextField(controller: medicalController, maxLines: 2, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سوابق پزشکی', prefixIcon: Icon(Icons.medical_services, color: AppTheme.yellow))),
               ]),
             ),
             actions: [
@@ -86,12 +97,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     return;
                   }
                   final data = {
-                    'name': nameController.text.trim(), 'phone': phoneController.text.trim(), 'national_id': nationalIdController.text.trim(),
-                    'address': addressController.text.trim(), 'gender': gender, 'job': jobController.text.trim(),
-                    'medical_history': medicalController.text.trim(), 'created_at': getCurrentJalaliDateTime(),
+                    'name': nameController.text.trim(), 
+                    'phone': phoneController.text.trim(), 
+                    'national_id': nationalIdController.text.trim(),
+                    'address': addressController.text.trim(), 
+                    'gender': gender, 
+                    'job': jobController.text.trim(),
+                    'medical_history': medicalController.text.trim(), 
+                    'created_at': getCurrentJalaliDateTime(),
                   };
-                  if (isEdit) { await DatabaseHelper.instance.updateCustomer(customer!['id'], data); } 
-                  else { await DatabaseHelper.instance.insertCustomer(data); }
+                  if (isEdit) { 
+                    await DatabaseHelper.instance.updateCustomer(customer!['id'], data); 
+                  } else { 
+                    await DatabaseHelper.instance.insertCustomer(data); 
+                  }
                   Navigator.pop(ctx);
                   _loadCustomers();
                 },
@@ -104,72 +123,26 @@ class _CustomersScreenState extends State<CustomersScreen> {
     );
   }
 
-  Future<void> _showDebtDialog(Map<String, dynamic> customer) async {
-    final currentDebt = (customer['total_debt'] ?? 0).toDouble();
-    final amountController = TextEditingController();
-    final descController = TextEditingController(text: 'پرداخت قسط');
-    Jalali payDate = Jalali.now();
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: StatefulBuilder(
-          builder: (ctx, setStateDialog) => AlertDialog(
-            backgroundColor: AppTheme.cardBlack,
-            title: Text('مدیریت بدهی: ${customer['name']}', style: const TextStyle(color: AppTheme.yellow)),
-            content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('بدهی فعلی: ${formatPrice(currentDebt.toInt())} تومان', style: const TextStyle(color: AppTheme.textWhite, fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextField(controller: amountController, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'مبلغ پرداختی (تومان)', prefixIcon: Icon(Icons.payments, color: AppTheme.yellow))),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showPersianDatePicker(context: ctx, initialDate: payDate, firstDate: Jalali(1400), lastDate: Jalali(1450));
-                    if (picked != null) setStateDialog(() => payDate = picked);
-                  },
-                  icon: const Icon(Icons.calendar_today, color: AppTheme.yellow),
-                  label: Text('تاریخ: ${payDate.year}/${payDate.month.toString().padLeft(2, '0')}/${payDate.day.toString().padLeft(2, '0')}', style: const TextStyle(color: AppTheme.textWhite)),
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.yellow)),
-                ),
-                const SizedBox(height: 12),
-                TextField(controller: descController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'توضیحات', prefixIcon: Icon(Icons.notes, color: AppTheme.yellow))),
-              ]),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف', style: TextStyle(color: AppTheme.textGrey))),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.yellow, foregroundColor: Colors.black),
-                onPressed: () async {
-                  final amount = double.tryParse(toEnglishDigits(amountController.text.replaceAll(',', ''))) ?? 0;
-                  if (amount <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مبلغ نامعتبر است'), backgroundColor: Colors.red));
-                    return;
-                  }
-                  final newDebt = currentDebt - amount;
-                  await DatabaseHelper.instance.updateCustomer(customer['id'], {'total_debt': newDebt});
-                  await DatabaseHelper.instance.insertInstallment({
-                    'type': 'customer', 'reference_id': customer['id'], 'amount': amount,
-                    'date': '${payDate.year}/${payDate.month.toString().padLeft(2, '0')}/${payDate.day.toString().padLeft(2, '0')}',
-                    'description': descController.text.trim(), 'is_paid': 1, 'created_at': getCurrentJalaliDateTime(),
-                  });
-                  Navigator.pop(ctx);
-                  _loadCustomers();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ پرداخت با موفقیت ثبت شد'), backgroundColor: Colors.green));
-                },
-                child: const Text('ثبت پرداخت', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _deleteCustomer(int id) async {
-    final confirm = await showDialog<bool>(context: context, builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(backgroundColor: AppTheme.cardBlack, title: const Text('تایید حذف', style: TextStyle(color: AppTheme.yellow)), content: const Text('آیا مطمئن هستید؟', style: TextStyle(color: AppTheme.textWhite)), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف', style: TextStyle(color: Colors.red)))])));
-    if (confirm == true) { await DatabaseHelper.instance.deleteCustomer(id); _loadCustomers(); }
+    final confirm = await showDialog<bool>(
+      context: context, 
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl, 
+        child: AlertDialog(
+          backgroundColor: AppTheme.cardBlack, 
+          title: const Text('تایید حذف', style: TextStyle(color: AppTheme.yellow)), 
+          content: const Text('آیا مطمئن هستید؟', style: TextStyle(color: AppTheme.textWhite)), 
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')), 
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف', style: TextStyle(color: Colors.red)))
+          ]
+        )
+      )
+    );
+    if (confirm == true) { 
+      await DatabaseHelper.instance.deleteCustomer(id); 
+      _loadCustomers(); 
+    }
   }
 
   @override
@@ -183,41 +156,55 @@ class _CustomersScreenState extends State<CustomersScreen> {
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: _searchController, style: const TextStyle(color: AppTheme.textWhite),
-              decoration: InputDecoration(hintText: 'جستجو بر اساس نام، شماره تماس یا کد ملی...', prefixIcon: const Icon(Icons.search, color: AppTheme.yellow), suffixIcon: _searchController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.yellow), onPressed: () { _searchController.clear(); _filter(''); }) : null, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              decoration: InputDecoration(
+                hintText: 'جستجو بر اساس نام، شماره یا کد ملی...', 
+                prefixIcon: const Icon(Icons.search, color: AppTheme.yellow), 
+                suffixIcon: _searchController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.yellow), onPressed: () { _searchController.clear(); _filter(''); }) : null, 
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))
+              ),
               onChanged: _filter,
             ),
           ),
           Expanded(
-            child: _isLoading ? const Center(child: CircularProgressIndicator(color: AppTheme.yellow)) : _filtered.isEmpty ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.people, size: 80, color: AppTheme.textGrey), const SizedBox(height: 16), Text('مشتری‌ای یافت نشد', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))])) : ListView.builder(
-              padding: const EdgeInsets.all(12), itemCount: _filtered.length,
-              itemBuilder: (context, index) {
-                final c = _filtered[index];
-                final debt = (c['total_debt'] ?? 0).toDouble();
-                final hasDebt = debt > 0;
-                
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(backgroundColor: hasDebt ? Colors.red.withOpacity(0.2) : AppTheme.yellow.withOpacity(0.2), child: Icon(hasDebt ? Icons.warning : Icons.person, color: hasDebt ? Colors.red : AppTheme.yellow)),
-                    title: Text(c['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
-                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('📞 ${c['phone'] ?? '-'} | 🆔 ${c['national_id'] ?? '-'}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                      if (hasDebt) Text('⚠️ بدهی: ${formatPrice(debt.toInt())} تومان', style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
-                    ]),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (hasDebt) IconButton(icon: const Icon(Icons.payments, color: AppTheme.yellow), tooltip: 'ثبت پرداخت قسط', onPressed: () => _showDebtDialog(c)),
-                      IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showCustomerDialog(customer: c)),
-                      IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteCustomer(c['id'])),
-                    ]),
-                    isThreeLine: true,
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator(color: AppTheme.yellow)) 
+              : _filtered.isEmpty 
+                ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.people, size: 80, color: AppTheme.textGrey), const SizedBox(height: 16), Text('مشتری‌ای یافت نشد', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))])) 
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12), itemCount: _filtered.length,
+                    itemBuilder: (context, index) {
+                      final c = _filtered[index];
+                      final debt = (c['total_debt'] ?? 0).toDouble();
+                      final hasDebt = debt > 0;
+                      
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: CircleAvatar(backgroundColor: hasDebt ? Colors.red.withOpacity(0.2) : AppTheme.yellow.withOpacity(0.2), child: Icon(hasDebt ? Icons.warning : Icons.person, color: hasDebt ? Colors.red : AppTheme.yellow)),
+                          title: Text(c['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
+                          subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('📞 ${c['phone'] ?? '-'} | 🆔 ${c['national_id'] ?? '-'}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                            if (hasDebt) Text('⚠️ بدهی: ${formatPrice(debt.toInt())} تومان', style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
+                          ]),
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showCustomerDialog(customer: c)),
+                            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteCustomer(c['id'])),
+                          ]),
+                          isThreeLine: true,
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(onPressed: () => _showCustomerDialog(), backgroundColor: AppTheme.yellow, foregroundColor: Colors.black, icon: const Icon(Icons.add), label: const Text('افزودن مشتری')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCustomerDialog(), 
+        backgroundColor: AppTheme.yellow, 
+        foregroundColor: Colors.black, 
+        icon: const Icon(Icons.add), 
+        label: const Text('افزودن مشتری')
+      ),
     );
   }
 }

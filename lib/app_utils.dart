@@ -151,3 +151,18 @@ const List<String> lensFeatures = [
 
 // جنس فریم
 const List<String> frameMaterials = ['فلزی', 'کائوچو', 'ترکیبی', 'تیتانیوم', 'پلاستیکی', 'چوبی', 'سایر'];
+// تولید شماره سفارش روزانه
+Future<String> generateDailyOrderNumber() async {
+  final now = Jalali.now();
+  final today = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+  final prefs = await SharedPreferences.getInstance();
+  final lastDate = prefs.getString('last_order_date') ?? '';
+  int lastCount = 0;
+  if (lastDate == today) {
+    lastCount = prefs.getInt('last_order_count') ?? 0;
+  }
+  lastCount++;
+  await prefs.setString('last_order_date', today);
+  await prefs.setInt('last_order_count', lastCount);
+  return 'ORD-$today-${lastCount.toString().padLeft(3, '0')}';
+}

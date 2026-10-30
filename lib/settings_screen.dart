@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 import 'database_helper.dart';
 import 'app_utils.dart';
+import 'license_helper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

@@ -8,36 +8,87 @@ class LicenseHelper {
   // تولید کد لایسنس در پنل توسعه‌دهنده
   static String generateLicenseCode(String deviceId, int planId, int days) {
     String payload = '$deviceId:$planId:$days';
-    String encoded = base64Encode(utf8.encode(payload));
-    int checksum = encoded.hashCode;
+    // استفاده از base64Url برای جلوگیری از کاراکترهای مشکل‌دار
+    String encoded = base64Url.encode(utf8.encode(payload)).replaceAll('=', '');
+    // استفاده از abs() برای جلوگیری از منفی شدن checksum
+    int checksum = encoded.hashCode.abs();
     return 'HOMA-$encoded-$checksum';
   }
 
   // اعتبارسنجی کد لایسنس در اپلیکیشن
-  static Future<bool> validateAndSaveLicense(String code, String currentDeviceId) async {
+  static Future<Map<String, dynamic>> validateAndSaveLicense(String code, String currentDeviceId) async {
     try {
-      List<String> parts = code.trim().split('-');
-      if (parts.length != 3 || parts[0] != 'HOMA') return false;
+      // چک فرمت کلی
+      if (!code.trim().startsWith('HOMA-')) {
+        return {'success': false, 'message': 'کد باید با HOMA- شروع شود'};
+      }
       
-      String encoded = parts[1];
-      int checksum = int.parse(parts[2]);
+      // حذف پیشوند HOMA- و split کردن
+      String withoutPrefix = code.trim().substring(5);
       
-      if (encoded.hashCode != checksum) return false;
+      // پیدا کردن آخرین - برای جدا کردن checksum
+      int lastDashIndex = withoutPrefix.lastIndexOf('-');
+      if (lastDashIndex == -1) {
+        return {'success': false, 'message': 'فرمت کد نامعتبر است'};
+      }
+      
+      String encoded = withoutPrefix.substring(0, lastDashIndex);
+      String checksumStr = withoutPrefix.substring(lastDashIndex + 1);
+      
+      int checksum;
+      try {
+        checksum = int.parse(checksumStr);
+      } catch (e) {
+        return {'success': false, 'message': 'checksum نامعتبر است'};
+      }
+      
+      // بررسی checksum
+      if (encoded.hashCode.abs() != checksum) {
+        return {'success': false, 'message': 'کد لایسنس دستکاری شده است'};
+      }
 
-      String decoded = utf8.decode(base64Decode(encoded));
+      // decode کردن payload
+      String decoded;
+      try {
+        // اضافه کردن padding برای base64Url
+        String padded = encoded;
+        while (padded.length % 4 != 0) {
+          padded += '=';
+        }
+        decoded = utf8.decode(base64Url.decode(padded));
+      } catch (e) {
+        return {'success': false, 'message': 'decode ناموفق بود'};
+      }
+
       List<String> payload = decoded.split(':');
+      if (payload.length != 3) {
+        return {'success': false, 'message': 'payload نامعتبر است'};
+      }
       
       String devId = payload[0];
-      int planId = int.parse(payload[1]);
-      int days = int.parse(payload[2]);
+      int planId;
+      int days;
+      try {
+        planId = int.parse(payload[1]);
+        days = int.parse(payload[2]);
+      } catch (e) {
+        return {'success': false, 'message': 'اعداد payload نامعتبر هستند'};
+      }
 
-      if (devId != currentDeviceId) return false; // شناسه دستگاه مطابقت ندارد!
+      // بررسی شناسه دستگاه
+      if (devId != currentDeviceId) {
+        return {
+          'success': false, 
+          'message': 'این کد برای دستگاه دیگری است!\n\nشناسه دستگاه شما: $currentDeviceId\nشناسه کد: $devId'
+        };
+      }
 
+      // ذخیره لایسنس
       Jalali expiry = Jalali.now().addDays(days);
       await saveLicense(code, planId, expiry);
-      return true;
+      return {'success': true, 'planId': planId, 'days': days};
     } catch (e) {
-      return false;
+      return {'success': false, 'message': 'خطای نامشخص: $e'};
     }
   }
 

@@ -67,9 +67,11 @@ String getCurrentJalaliDate() {
   return '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
 }
 
+// اصلاح شده: استفاده از DateTime برای ساعت و دقیقه دقیق
 String getCurrentJalaliDateTime() {
-  final now = Jalali.now();
-  return '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  final nowGregorian = DateTime.now();
+  final nowJalali = Jalali.fromDateTime(nowGregorian);
+  return '${nowJalali.year}/${nowJalali.month.toString().padLeft(2, '0')}/${nowJalali.day.toString().padLeft(2, '0')} ${nowGregorian.hour.toString().padLeft(2, '0')}:${nowGregorian.minute.toString().padLeft(2, '0')}';
 }
 
 class CommaSeparatorFormatter extends TextInputFormatter {
@@ -83,6 +85,22 @@ class CommaSeparatorFormatter extends TextInputFormatter {
     final formatted = intVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
     return TextEditingValue(text: formatted, selection: TextSelection.collapsed(offset: formatted.length));
   }
+}
+
+// تولید شماره سفارش روزانه
+Future<String> generateDailyOrderNumber() async {
+  final now = Jalali.now();
+  final today = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+  final prefs = await SharedPreferences.getInstance();
+  final lastDate = prefs.getString('last_order_date') ?? '';
+  int lastCount = 0;
+  if (lastDate == today) {
+    lastCount = prefs.getInt('last_order_count') ?? 0;
+  }
+  lastCount++;
+  await prefs.setString('last_order_date', today);
+  await prefs.setInt('last_order_count', lastCount);
+  return 'ORD-$today-${lastCount.toString().padLeft(3, '0')}';
 }
 
 // لیست نکات روزانه مرتبط با چشم و عینک
@@ -152,18 +170,3 @@ const List<String> lensFeatures = [
 
 // جنس فریم
 const List<String> frameMaterials = ['فلزی', 'کائوچو', 'ترکیبی', 'تیتانیوم', 'پلاستیکی', 'چوبی', 'سایر'];
-// تولید شماره سفارش روزانه
-Future<String> generateDailyOrderNumber() async {
-  final now = Jalali.now();
-  final today = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-  final prefs = await SharedPreferences.getInstance();
-  final lastDate = prefs.getString('last_order_date') ?? '';
-  int lastCount = 0;
-  if (lastDate == today) {
-    lastCount = prefs.getInt('last_order_count') ?? 0;
-  }
-  lastCount++;
-  await prefs.setString('last_order_date', today);
-  await prefs.setInt('last_order_count', lastCount);
-  return 'ORD-$today-${lastCount.toString().padLeft(3, '0')}';
-}

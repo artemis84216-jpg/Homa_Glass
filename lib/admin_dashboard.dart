@@ -12,6 +12,7 @@ import 'reports_screen.dart';
 import 'suppliers_screen.dart';
 import 'license_input_screen.dart';
 import 'license_helper.dart';
+import 'database_helper.dart'; // <-- این خط برای رفع خطای بیلد اضافه شد
 import 'app_utils.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -33,8 +34,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     _dailyTip = getRandomDailyTip();
     final now = Jalali.now();
-    const weekDays = ['دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه', 'یکشنبه'];
+    
+    // اصلاح ترتیب روزهای هفته: شنبه=1، یکشنبه=2، دوشنبه=3، سه‌شنبه=4، چهارشنبه=5، پنج‌شنبه=6، جمعه=7
+    const weekDays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
     const monthNames = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+    
     _todayDate = '${weekDays[now.weekDay - 1]} ${toPersianDigits(now.day.toString())} ${monthNames[now.month]} ${toPersianDigits(now.year.toString())}';
     _loadLicense();
   }
@@ -83,7 +87,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // تاریخ
+                    // تاریخ امروز (اصلاح شده)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 1)),

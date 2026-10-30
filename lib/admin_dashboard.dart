@@ -36,11 +36,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     _dailyTip = getRandomDailyTip();
     final now = Jalali.now();
-    
-    // اصلاح ترتیب روزهای هفته: شنبه=1، یکشنبه=2، دوشنبه=3، سه‌شنبه=4، چهارشنبه=5، پنج‌شنبه=6، جمعه=7
     const weekDays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
     const monthNames = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-    
     _todayDate = '${weekDays[now.weekDay - 1]} ${toPersianDigits(now.day.toString())} ${monthNames[now.month]} ${toPersianDigits(now.year.toString())}';
     _loadLicense();
   }
@@ -48,16 +45,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _loadLicense() async {
     final license = await LicenseHelper.getLicense();
     String planName = 'بدون لایسنس';
+    
     if (license != null && license['isActive'] == true) {
       final plans = await DatabaseHelper.instance.getAllPlans();
       final plan = plans.firstWhere((p) => p['id'] == license['planId'], orElse: () => {});
-      if (plan.isNotEmpty) planName = plan['name'] ?? 'پلن نامشخص';
+      if (plan.isNotEmpty) {
+        planName = plan['name'] ?? 'پلن نامشخص';
+      } else {
+        planName = 'پلن ${license['planId']} (ثبت نشده در دیتابیس)';
+      }
     }
-    setState(() {
-      _license = license;
-      _planName = planName;
-      _isLoading = false;
-    });
+    
+    if (mounted) {
+      setState(() {
+        _license = license;
+        _planName = planName;
+        _isLoading = false;
+      });
+    }
   }
 
   bool get _isLicenseActive => _license != null && _license!['isActive'] == true;
@@ -89,7 +94,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // تاریخ امروز
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 1)),
@@ -97,7 +101,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 12),
 
-                    // وضعیت لایسنس
+                    // کارت وضعیت لایسنس با اطلاعات دیباگ
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: _getLicenseColor(), width: 2)),
@@ -110,9 +114,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ]),
                         const SizedBox(height: 8),
                         if (_isLicenseActive)
-                          Text('${toPersianDigits(_license!['daysRemaining'].toString())} روز باقی‌مانده', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12))
+                          Text('${toPersianDigits(_license!['daysRemaining'].toString())} روز باقی‌مانده', style: const TextStyle(color: AppTheme.textWhite, fontSize: 12))
                         else
                           const Text('برای استفاده از تمام قابلیت‌ها، لایسنس را فعال کنید', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                        
+                        // خط دیباگ برای فهمیدن مشکل
+                        Text(
+                          'دیباگ: موجود=${_license != null} | فعال=${_license?['isActive'] ?? false} | روز=${_license?['daysRemaining'] ?? 0}',
+                          style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace'),
+                        ),
+                        
                         const SizedBox(height: 8),
                         SizedBox(
                           width: double.infinity,
@@ -130,7 +141,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 16),
 
-                    // نکته روزانه
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(gradient: LinearGradient(colors: [AppTheme.yellow.withOpacity(0.3), AppTheme.yellow.withOpacity(0.1)]), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 2)),

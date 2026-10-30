@@ -176,10 +176,13 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                           )
                         : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.library_books, color: AppTheme.yellow)),
                     title: Text(i['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
-                    subtitle: Column(
+                      subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                        // دیباگ: نمایش مسیر عکس
+                        if (images.isNotEmpty)
+                          Text('مسیر: ${images.first}', style: const TextStyle(color: Colors.cyan, fontSize: 9, fontFamily: 'monospace')),
                         if (images.isNotEmpty && !File(images.first).existsSync())
                           const Text('⚠️ فایل عکس یافت نشد!', style: TextStyle(color: Colors.red, fontSize: 11)),
                       ],

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -10,14 +11,18 @@ Future<List<String>> savePickedImages(List<XFile> picked) async {
   }
 
   List<String> savedPaths = [];
+  final random = Random();
+  
   for (int i = 0; i < picked.length; i++) {
     try {
-      final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+      // استفاده از microseconds + random برای اطمینان از یکتا بودن نام فایل
+      final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${random.nextInt(99999)}_$i';
+      final fileName = 'img_$uniqueId.jpg';
       final target = File('${dir.path}/$fileName');
       await File(picked[i].path).copy(target.path);
       savedPaths.add(target.path);
     } catch (e) {
-      // اگر کپی نشد، همان مسیر موقت را نگه دار (حداقل در همان جلسه کار می‌کند)
+      // اگر کپی نشد، همان مسیر موقت را نگه دار
       savedPaths.add(picked[i].path);
     }
   }

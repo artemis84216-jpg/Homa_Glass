@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'database_helper.dart';
 
 class LicenseHelper {
   static const String _licenseKey = 'glass_license';
@@ -72,16 +73,36 @@ class LicenseHelper {
         };
       }
 
-      // ذخیره لایسنس با تاریخ استاندارد DateTime
+      // دریافت نام پلن از دیتابیس
+      final plans = await DatabaseHelper.instance.getAllPlans();
+      final plan = plans.firstWhere((p) => p['id'] == planId, orElse: () => {'name': 'پلن $planId'});
+      final planName = plan['name'] ?? 'پلن $planId';
+
+      // ذخیره لایسنس در SharedPreferences
       final expiryDate = DateTime.now().add(Duration(days: days));
       await saveLicense(code, planId, expiryDate);
-      return {'success': true, 'planId': planId, 'days': days};
+      
+      // ذخیره سابقه لایسنس در جدول licenses برای ردیابی
+      try {
+        await DatabaseHelper.instance.insertLicense({
+          'shop_name': 'Homa_Glass',
+          'device_id': currentDeviceId,
+          'license_code': code,
+          'plan_id': planId,
+          'plan_name': planName,
+          'expiry_date': expiryDate.toIso8601String(),
+          'issued_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        print('Error saving license record: $e');
+      }
+      
+      return {'success': true, 'planId': planId, 'planName': planName, 'days': days};
     } catch (e) {
       return {'success': false, 'message': 'خطای نامشخص: $e'};
     }
   }
 
-  // دریافت وضعیت لایسنس (با استفاده از DateTime برای اطمینان ۱۰۰٪)
   static Future<Map<String, dynamic>?> getLicense() async {
     final prefs = await SharedPreferences.getInstance();
     final licenseJson = prefs.getString(_licenseKey);

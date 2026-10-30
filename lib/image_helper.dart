@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -13,12 +12,12 @@ Future<List<String>> savePickedImages(List<XFile> picked) async {
   List<String> savedPaths = [];
   for (int i = 0; i < picked.length; i++) {
     try {
-      final fileName = 'img_${DateTime.now().microsecondsSinceEpoch}_$i.jpg';
+      final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
       final target = File('${dir.path}/$fileName');
       await File(picked[i].path).copy(target.path);
       savedPaths.add(target.path);
     } catch (e) {
-      // اگر کپی موفق نبود، از مسیر اصلی استفاده می‌کنیم
+      // اگر کپی نشد، همان مسیر موقت را نگه دار (حداقل در همان جلسه کار می‌کند)
       savedPaths.add(picked[i].path);
     }
   }
@@ -27,32 +26,11 @@ Future<List<String>> savePickedImages(List<XFile> picked) async {
 
 List<String> parseImagesHelper(dynamic value) {
   if (value == null) return [];
-  
+  if (value is String && value.trim().isNotEmpty) {
+    return value.split('|').where((e) => e.trim().isNotEmpty).toList();
+  }
   if (value is List) {
     return value.map((e) => e.toString()).toList();
   }
-  
-  if (value is String) {
-    if (value.trim().isEmpty) return [];
-    
-    // فرمت جدید: جدا شده با |
-    if (value.contains('|')) {
-      return value.split('|').where((e) => e.trim().isNotEmpty).toList();
-    }
-    
-    // فرمت JSON قدیمی
-    if (value.trim().startsWith('[')) {
-      try {
-        final decoded = jsonDecode(value);
-        if (decoded is List) {
-          return decoded.map((e) => e.toString()).toList();
-        }
-      } catch (_) {}
-    }
-    
-    // فرمت تک عکس قدیمی
-    return [value];
-  }
-  
   return [];
 }

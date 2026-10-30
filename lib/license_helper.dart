@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'dart:convert';
 
 class LicenseHelper {
@@ -8,9 +7,7 @@ class LicenseHelper {
   // تولید کد لایسنس در پنل توسعه‌دهنده
   static String generateLicenseCode(String deviceId, int planId, int days) {
     String payload = '$deviceId:$planId:$days';
-    // استفاده از base64Url برای جلوگیری از کاراکترهای مشکل‌دار
     String encoded = base64Url.encode(utf8.encode(payload)).replaceAll('=', '');
-    // استفاده از abs() برای جلوگیری از منفی شدن checksum
     int checksum = encoded.hashCode.abs();
     return 'HOMA-$encoded-$checksum';
   }
@@ -18,15 +15,11 @@ class LicenseHelper {
   // اعتبارسنجی کد لایسنس در اپلیکیشن
   static Future<Map<String, dynamic>> validateAndSaveLicense(String code, String currentDeviceId) async {
     try {
-      // چک فرمت کلی
       if (!code.trim().startsWith('HOMA-')) {
         return {'success': false, 'message': 'کد باید با HOMA- شروع شود'};
       }
       
-      // حذف پیشوند HOMA- و split کردن
       String withoutPrefix = code.trim().substring(5);
-      
-      // پیدا کردن آخرین - برای جدا کردن checksum
       int lastDashIndex = withoutPrefix.lastIndexOf('-');
       if (lastDashIndex == -1) {
         return {'success': false, 'message': 'فرمت کد نامعتبر است'};
@@ -42,15 +35,12 @@ class LicenseHelper {
         return {'success': false, 'message': 'checksum نامعتبر است'};
       }
       
-      // بررسی checksum
       if (encoded.hashCode.abs() != checksum) {
         return {'success': false, 'message': 'کد لایسنس دستکاری شده است'};
       }
 
-      // decode کردن payload
       String decoded;
       try {
-        // اضافه کردن padding برای base64Url
         String padded = encoded;
         while (padded.length % 4 != 0) {
           padded += '=';
@@ -75,7 +65,6 @@ class LicenseHelper {
         return {'success': false, 'message': 'اعداد payload نامعتبر هستند'};
       }
 
-      // بررسی شناسه دستگاه
       if (devId != currentDeviceId) {
         return {
           'success': false, 
@@ -83,15 +72,16 @@ class LicenseHelper {
         };
       }
 
-      // ذخیره لایسنس
-      Jalali expiry = Jalali.now().addDays(days);
-      await saveLicense(code, planId, expiry);
+      // ذخیره لایسنس با تاریخ استاندارد DateTime
+      final expiryDate = DateTime.now().add(Duration(days: days));
+      await saveLicense(code, planId, expiryDate);
       return {'success': true, 'planId': planId, 'days': days};
     } catch (e) {
       return {'success': false, 'message': 'خطای نامشخص: $e'};
     }
   }
 
+  // دریافت وضعیت لایسنس (با استفاده از DateTime برای اطمینان ۱۰۰٪)
   static Future<Map<String, dynamic>?> getLicense() async {
     final prefs = await SharedPreferences.getInstance();
     final licenseJson = prefs.getString(_licenseKey);
@@ -99,27 +89,27 @@ class LicenseHelper {
 
     try {
       final license = jsonDecode(licenseJson);
-      final expiryDate = Jalali.fromDateTime(DateTime.parse(license['expiry_date']));
-      final now = Jalali.now();
-      final daysRemaining = expiryDate.toDateTime().difference(now.toDateTime()).inDays;
+      final expiryDate = DateTime.parse(license['expiry_date']);
+      final now = DateTime.now();
+      final daysRemaining = expiryDate.difference(now).inDays;
 
       return {
         ...license,
-        'expiryJalali': expiryDate,
         'daysRemaining': daysRemaining,
         'isActive': daysRemaining >= 0,
       };
     } catch (e) {
+      print('License parse error: $e');
       return null;
     }
   }
 
-  static Future<void> saveLicense(String code, int planId, Jalali expiry) async {
+  static Future<void> saveLicense(String code, int planId, DateTime expiry) async {
     final prefs = await SharedPreferences.getInstance();
     final license = {
       'license_code': code,
       'planId': planId,
-      'expiry_date': expiry.toDateTime().toIso8601String(),
+      'expiry_date': expiry.toIso8601String(),
     };
     await prefs.setString(_licenseKey, jsonEncode(license));
   }

@@ -27,9 +27,30 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا در بارگذاری: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red));
       }
     }
+  }
+
+  void _showFullScreenImage(BuildContext context, String imagePath) {
+    final file = File(imagePath);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('فایل عکس یافت نشد'), backgroundColor: Colors.red));
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(ctx),
+          child: InteractiveViewer(
+            panEnabled: true, boundaryMargin: const EdgeInsets.all(20), minScale: 0.5, maxScale: 4.0,
+            child: Image.file(file, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showDialog({Map<String, dynamic>? item}) async {
@@ -57,21 +78,10 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      try {
-                        final List<XFile>? images = await _picker.pickMultiImage();
-                        if (images != null && images.isNotEmpty) {
-                          final saved = await savePickedImages(images);
-                          setStateDialog(() {
-                            currentImages = saved;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('✓ ${saved.length} عکس با موفقیت بارگذاری شد'), backgroundColor: Colors.green)
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('خطا در انتخاب عکس: $e'), backgroundColor: Colors.red)
-                        );
+                      final List<XFile>? images = await _picker.pickMultiImage();
+                      if (images != null && images.isNotEmpty) {
+                        final saved = await savePickedImages(images);
+                        setStateDialog(() => currentImages = saved);
                       }
                     },
                     icon: const Icon(Icons.image, color: AppTheme.yellow),
@@ -82,18 +92,16 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8, runSpacing: 8,
-                      children: currentImages.map((path) {
-                        final file = File(path);
-                        return ClipRRect(
+                      children: currentImages.map((path) => GestureDetector(
+                        onTap: () => _showFullScreenImage(ctx, path),
+                        child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: SizedBox(
-                            width: 60, height: 60,
-                            child: file.existsSync() 
-                                ? Image.file(file, fit: BoxFit.cover) 
-                                : const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                            width: 80, height: 80,
+                            child: Image.file(File(path), fit: BoxFit.cover),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                      )).toList(),
                     ),
                   ]
                 ]),
@@ -122,7 +130,7 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                       Navigator.pop(ctx);
                       _loadItems();
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا در ذخیره: $e'), backgroundColor: Colors.red));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red));
                     }
                   },
                   child: Text(isEdit ? 'ذخیره' : 'افزودن', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -161,32 +169,23 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    // اصلاح: نمایش عکس در لیست اصلی
-                    leading: images.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: SizedBox(
-                              width: 50, height: 50,
-                              child: Image.file(
-                                File(images.first), 
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                    leading: images.isNotEmpty 
+                        ? GestureDetector(
+                            onTap: () => _showFullScreenImage(context, images.first),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 50, height: 50,
+                                child: Image.file(File(images.first), fit: BoxFit.cover),
                               ),
                             ),
-                          )
+                          ) 
                         : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.library_books, color: AppTheme.yellow)),
                     title: Text(i['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                        // دیباگ: نمایش مسیر عکس
-                        if (images.isNotEmpty)
-                          Text('مسیر: ${images.first}', style: const TextStyle(color: Colors.cyan, fontSize: 9, fontFamily: 'monospace')),
-                        if (images.isNotEmpty && !File(images.first).existsSync())
-                          const Text('⚠️ فایل عکس یافت نشد!', style: TextStyle(color: Colors.red, fontSize: 11)),
-                      ],
-                    ),
+                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                      if (images.length > 1) Text('و ${toPersianDigits((images.length - 1).toString())} عکس دیگر', style: const TextStyle(color: AppTheme.textGrey, fontSize: 11, fontStyle: FontStyle.italic)),
+                    ]),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showDialog(item: i)),
                       IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteItem(i['id'])),

@@ -4,7 +4,8 @@ import 'device_info_helper.dart';
 import 'license_helper.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
-import 'general_info_dev_screen.dart'; // فایل جدیدی که در مرحله بعد می‌سازیم
+import 'general_info_dev_screen.dart';
+import 'license_history_screen.dart';
 
 class DeveloperPanelScreen extends StatefulWidget {
   const DeveloperPanelScreen({super.key});
@@ -135,6 +136,32 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                           ),
                         ),
                       ]
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // بخش سوابق لایسنس‌های صادر شده
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(children: [Icon(Icons.history, color: AppTheme.yellow), SizedBox(width: 8), Text('سوابق لایسنس‌های صادر شده', style: TextStyle(color: AppTheme.yellow, fontWeight: FontWeight.bold))]),
+                      const SizedBox(height: 8),
+                      const Text('مشاهده تمام لایسنس‌هایی که برای دستگاه‌های مختلف صادر شده است', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseHistoryScreen())),
+                          icon: const Icon(Icons.list),
+                          label: const Text('مشاهده سوابق'),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cardBlack, foregroundColor: AppTheme.yellow, side: const BorderSide(color: AppTheme.yellow)),
+                        ),
+                      ),
                     ],
                   ),
                 ),

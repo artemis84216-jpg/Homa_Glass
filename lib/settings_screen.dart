@@ -255,6 +255,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              // کارت پاک کردن لایسنس قبلی
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(children: [Icon(Icons.key_off, color: Colors.purple), SizedBox(width: 8), Text('پاک کردن لایسنس قبلی', style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold))]),
+                      const SizedBox(height: 12),
+                      const Text('اگر لایسنس قدیمی ذخیره شده و نمی‌خواهید آن را استفاده کنید، این دکمه را بزنید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => Directionality(
+                                textDirection: TextDirection.rtl,
+                                child: AlertDialog(
+                                  backgroundColor: AppTheme.cardBlack,
+                                  title: const Text('تایید پاک کردن لایسنس', style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
+                                  content: const Text('آیا مطمئن هستید که می‌خواهید لایسنس فعلی را پاک کنید؟', style: TextStyle(color: AppTheme.textWhite)),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('بله، پاک کن', style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold))),
+                                  ],
+                                ),
+                              ),
+                            );
+                            if (confirm == true) {
+                              await LicenseHelper.clearLicense();
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ لایسنس پاک شد. برنامه را ببندید و دوباره باز کنید.'), backgroundColor: Colors.green, duration: Duration(seconds: 3)));
+                            }
+                          },
+                          icon: const Icon(Icons.delete),
+                          label: const Text('پاک کردن لایسنس', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // کارت حذف کامل اطلاعات
               Card(

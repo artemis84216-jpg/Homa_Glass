@@ -27,7 +27,7 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا در بارگذاری: $e'), backgroundColor: Colors.red));
       }
     }
   }
@@ -61,9 +61,11 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                         final List<XFile>? images = await _picker.pickMultiImage();
                         if (images != null && images.isNotEmpty) {
                           final saved = await savePickedImages(images);
-                          setStateDialog(() => currentImages = saved);
+                          setStateDialog(() {
+                            currentImages = saved;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('✓ عکس‌ها با موفقیت بارگذاری شدند'), backgroundColor: Colors.green)
+                            SnackBar(content: Text('✓ ${saved.length} عکس با موفقیت بارگذاری شد'), backgroundColor: Colors.green)
                           );
                         }
                       } catch (e) {
@@ -88,7 +90,7 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                             width: 60, height: 60,
                             child: file.existsSync() 
                                 ? Image.file(file, fit: BoxFit.cover) 
-                                : const Icon(Icons.broken_image, color: Colors.red),
+                                : const Icon(Icons.broken_image, color: Colors.red, size: 40),
                           ),
                         );
                       }).toList(),
@@ -155,12 +157,33 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
               itemBuilder: (context, index) {
                 final i = _items[index];
                 final List<String> images = parseImagesHelper(i['image_paths']);
+                
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    leading: CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.library_books, color: AppTheme.yellow)),
+                    // اصلاح: نمایش عکس در لیست اصلی
+                    leading: images.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              width: 50, height: 50,
+                              child: Image.file(
+                                File(images.first), 
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                              ),
+                            ),
+                          )
+                        : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.library_books, color: AppTheme.yellow)),
                     title: Text(i['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
-                    subtitle: Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                        if (images.isNotEmpty && !File(images.first).existsSync())
+                          const Text('⚠️ فایل عکس یافت نشد!', style: TextStyle(color: Colors.red, fontSize: 11)),
+                      ],
+                    ),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showDialog(item: i)),
                       IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteItem(i['id'])),

@@ -138,6 +138,11 @@ class DatabaseHelper {
     await db.execute('CREATE TABLE plans (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL, duration_type TEXT DEFAULT "months", price REAL NOT NULL, max_employees INTEGER NOT NULL, max_customers INTEGER NOT NULL, is_active INTEGER DEFAULT 1, created_at TEXT)');
     await db.execute('CREATE TABLE licenses (id INTEGER PRIMARY KEY AUTOINCREMENT, shop_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL, plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TEXT)');
 
+    // پلن‌های پیش‌فرض
+    await db.execute('INSERT INTO plans (name, duration_value, duration_type, price, max_employees, max_customers, is_active, created_at) VALUES ("پلن پایه - ۱ ماهه", 1, "months", 500000, 2, 100, 1, "1403/01/01")');
+    await db.execute('INSERT INTO plans (name, duration_value, duration_type, price, max_employees, max_customers, is_active, created_at) VALUES ("پلن حرفه‌ای - ۶ ماهه", 6, "months", 2500000, 5, 500, 1, "1403/01/01")');
+    await db.execute('INSERT INTO plans (name, duration_value, duration_type, price, max_employees, max_customers, is_active, created_at) VALUES ("پلن سازمانی - ۱ ساله", 12, "months", 4500000, 999999, 999999, 1, "1403/01/01")');
+
     // اطلاعات عمومی (جدید)
     await db.execute('''
       CREATE TABLE general_info (

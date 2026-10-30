@@ -58,7 +58,7 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
     
     if (result['success'] == true) {
       final plans = await DatabaseHelper.instance.getAllPlans();
-      final plan = plans.firstWhere((p) => p['id'] == result['planId'], orElse: () => {'name': 'پلن $result[planId]'});
+      final plan = plans.firstWhere((p) => p['id'] == result['planId'], orElse: () => {'name': 'پلن ${result['planId']}'});
       
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('✓ لایسنس فعال شد - ${plan['name']} - ${toPersianDigits(result['days'].toString())} روز'),
@@ -116,71 +116,87 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
         textDirection: TextDirection.rtl,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: hasActiveLicense ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: hasActiveLicense ? Colors.green : Colors.orange, width: 1),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Icon(hasActiveLicense ? Icons.check_circle : Icons.info, color: hasActiveLicense ? Colors.green : Colors.orange, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(hasActiveLicense ? 'لایسنس فعال' : 'فعال‌سازی لایسنس', style: TextStyle(color: hasActiveLicense ? Colors.green : Colors.orange, fontWeight: FontWeight.bold, fontSize: 16))),
-                ]),
-                const SizedBox(height: 8),
-                if (hasActiveLicense) ...[
-                  Text('پلن فعلی: $_currentPlanName', style: const TextStyle(color: AppTheme.textWhite)),
-                  Text('روزهای باقی‌مانده: ${toPersianDigits((_currentLicense!['daysRemaining']).toString())}', style: const TextStyle(color: AppTheme.textWhite)),
-                ] else
-                  const Text('برای استفاده از تمام قابلیت‌های برنامه، کد لایسنس را از توسعه‌دهنده دریافت و در اینجا وارد کنید.', style: TextStyle(color: Colors.orange, fontSize: 13)),
-              ]),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 1)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('شناسه دستگاه شما:', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                const SizedBox(height: 4),
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, 
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: hasActiveLicense ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: hasActiveLicense ? Colors.green : Colors.orange, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, 
                   children: [
-                    Expanded(child: SelectableText(_deviceId, style: const TextStyle(color: AppTheme.textYellow, fontSize: 12, fontFamily: 'monospace'))),
-                    IconButton(
-                      icon: const Icon(Icons.copy, color: AppTheme.yellow, size: 20),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _deviceId));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شناسه کپی شد'), backgroundColor: Colors.green));
-                      },
+                    Row(
+                      children: [
+                        Icon(hasActiveLicense ? Icons.check_circle : Icons.info, color: hasActiveLicense ? Colors.green : Colors.orange, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            hasActiveLicense ? 'لایسنس فعال' : 'فعال‌سازی لایسنس', 
+                            style: TextStyle(color: hasActiveLicense ? Colors.green : Colors.orange, fontWeight: FontWeight.bold, fontSize: 16)
+                          )
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (hasActiveLicense) ...[
+                      Text('پلن فعلی: $_currentPlanName', style: const TextStyle(color: AppTheme.textWhite)),
+                      Text('روزهای باقی‌مانده: ${toPersianDigits((_currentLicense!['daysRemaining']).toString())}', style: const TextStyle(color: AppTheme.textWhite)),
+                    ] else
+                      const Text('برای استفاده از تمام قابلیت‌های برنامه، کد لایسنس را از توسعه‌دهنده دریافت و در اینجا وارد کنید.', style: TextStyle(color: Colors.orange, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 1)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, 
+                  children: [
+                    const Text('شناسه دستگاه شما:', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(child: SelectableText(_deviceId, style: const TextStyle(color: AppTheme.textYellow, fontSize: 12, fontFamily: 'monospace'))),
+                        IconButton(
+                          icon: const Icon(Icons.copy, color: AppTheme.yellow, size: 20),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: _deviceId));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شناسه کپی شد'), backgroundColor: Colors.green));
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _licenseController,
-              style: const TextStyle(color: AppTheme.textWhite, fontFamily: 'monospace', fontSize: 12),
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'کد لایسنس',
-                hintText: 'HOMA-...',
-                prefixIcon: Icon(Icons.key, color: AppTheme.yellow),
-                alignLabelWithHint: true,
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 55,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _activateLicense,
-                icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.check_circle, size: 24),
-                label: Text(_isLoading ? 'در حال بررسی...' : 'فعال‌سازی', style: const TextStyle(fontSize: 18)),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _licenseController,
+                style: const TextStyle(color: AppTheme.textWhite, fontFamily: 'monospace', fontSize: 12),
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'کد لایسنس',
+                  hintText: 'HOMA-...',
+                  prefixIcon: Icon(Icons.key, color: AppTheme.yellow),
+                  alignLabelWithHint: true,
+                ),
               ),
-            ),
-          ]),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 55,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _activateLicense,
+                  icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.check_circle, size: 24),
+                  label: Text(_isLoading ? 'در حال بررسی...' : 'فعال‌سازی', style: const TextStyle(fontSize: 18)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

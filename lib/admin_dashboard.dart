@@ -12,7 +12,9 @@ import 'reports_screen.dart';
 import 'suppliers_screen.dart';
 import 'license_input_screen.dart';
 import 'license_helper.dart';
-import 'database_helper.dart'; // <-- این خط برای رفع خطای بیلد اضافه شد
+import 'database_helper.dart';
+import 'general_info_screen.dart';
+import 'about_screen.dart';
 import 'app_utils.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -87,7 +89,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // تاریخ امروز (اصلاح شده)
+                    // تاریخ امروز
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.yellow, width: 1)),
@@ -157,6 +159,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _buildCard(Icons.business, 'تامین‌کنندگان', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SuppliersScreen()))),
                         _buildCard(Icons.people_alt, 'کارمندان', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmployeesScreen()))),
                         _buildCard(Icons.bar_chart, 'گزارشات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()))),
+                        _buildCard(Icons.library_books, 'اطلاعات عمومی', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GeneralInfoScreen()))),
+                        _buildCard(Icons.info, 'درباره ما', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()))),
                       ],
                     ),
                   ],

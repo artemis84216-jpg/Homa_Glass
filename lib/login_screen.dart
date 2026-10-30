@@ -68,8 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text('Homa_Glass', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.yellow, letterSpacing: 1)),
+                 
                   const SizedBox(height: 8),
-                  const Text('سیستم مدیریت عینک و معاینه چشم', style: TextStyle(color: AppTheme.textGrey, fontSize: 14)),
+                  const Text('مدیریت مراکز معاینه چشم و فروش عینک', style: TextStyle(color: AppTheme.textGrey, fontSize: 14)), 
                   const SizedBox(height: 24),
                   TextField(
                     controller: _passwordController,

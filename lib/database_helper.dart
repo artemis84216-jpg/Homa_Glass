@@ -163,13 +163,29 @@ class DatabaseHelper {
       try { await db.execute('CREATE TABLE installments (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, reference_id INTEGER, amount REAL, date TEXT, description TEXT, is_paid INTEGER DEFAULT 1, created_at TEXT)'); } catch (e) {}
       try { await db.execute('ALTER TABLE orders ADD COLUMN is_credit INTEGER DEFAULT 0'); } catch (e) {}
     }
-    if (oldVersion < 3) {
+        if (oldVersion < 3) {
       try {
         await db.execute('''
           CREATE TABLE general_info (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
+            image_paths TEXT,
+            created_at TEXT
+          )
+        ''');
+      } catch (e) {}
+    }
+    if (oldVersion < 4) {
+      try {
+        // حذف جدول قدیمی و ساخت جدول جدید
+        await db.execute('DROP TABLE IF EXISTS general_info');
+        await db.execute('''
+          CREATE TABLE general_info (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name_fa TEXT NOT NULL,
+            name_en TEXT,
+            description TEXT,
             image_paths TEXT,
             created_at TEXT
           )

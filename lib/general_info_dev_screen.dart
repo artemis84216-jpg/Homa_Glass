@@ -67,7 +67,6 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
         child: StatefulBuilder(
           builder: (ctx, setStateDialog) {
             List<String> currentImages = parseImagesHelper(imagePathsJson);
-            
             return AlertDialog(
               backgroundColor: AppTheme.cardBlack,
               title: Text(isEdit ? 'ویرایش محصول' : 'افزودن محصول جدید', style: const TextStyle(color: AppTheme.yellow)),
@@ -99,10 +98,7 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                         onTap: () => _showFullScreenImage(ctx, path),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: SizedBox(
-                            width: 80, height: 80,
-                            child: Image.file(File(path), fit: BoxFit.cover),
-                          ),
+                          child: SizedBox(width: 80, height: 80, child: Image.file(File(path), fit: BoxFit.cover)),
                         ),
                       )).toList(),
                     ),
@@ -126,11 +122,8 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                         'image_paths': currentImages.isNotEmpty ? currentImages.join('|') : null,
                         'created_at': getCurrentJalaliDateTime(),
                       };
-                      if (isEdit) { 
-                        await DatabaseHelper.instance.updateGeneralInfo(item!['id'], data); 
-                      } else { 
-                        await DatabaseHelper.instance.insertGeneralInfo(data); 
-                      }
+                      if (isEdit) { await DatabaseHelper.instance.updateGeneralInfo(item!['id'], data); } 
+                      else { await DatabaseHelper.instance.insertGeneralInfo(data); }
                       Navigator.pop(ctx);
                       _loadItems();
                     } catch (e) {
@@ -149,14 +142,50 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
 
   Future<void> _deleteItem(int id) async {
     final confirm = await showDialog<bool>(context: context, builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(backgroundColor: AppTheme.cardBlack, title: const Text('تایید حذف', style: TextStyle(color: AppTheme.yellow)), content: const Text('آیا مطمئن هستید؟', style: TextStyle(color: AppTheme.textWhite)), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف', style: TextStyle(color: Colors.red)))])));
-    if (confirm == true) { 
-      await DatabaseHelper.instance.deleteGeneralInfo(id); 
-      _loadItems(); 
-    }
+    if (confirm == true) { await DatabaseHelper.instance.deleteGeneralInfo(id); _loadItems(); }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(title: const Text('مدیریت محصولات
+      appBar: AppBar(title: const Text('مدیریت محصولات'), centerTitle: true),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: AppTheme.yellow)) 
+        : _items.isEmpty 
+          ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inventory_2, size: 80, color: AppTheme.textGrey), const SizedBox(height: 16), Text('محصولی ثبت نشده', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))])) 
+          : ListView.builder(
+              padding: const EdgeInsets.all(12), itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final i = _items[index];
+                final List<String> images = parseImagesHelper(i['image_paths']);
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: images.isNotEmpty 
+                        ? GestureDetector(
+                            onTap: () => _showFullScreenImage(context, images.first),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(width: 50, height: 50, child: Image.file(File(images.first), fit: BoxFit.cover)),
+                            ),
+                          ) 
+                        : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.inventory_2, color: AppTheme.yellow)),
+                    title: Text(i['name_fa'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
+                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      if ((i['name_en'] ?? '').toString().isNotEmpty) Text(i['name_en'], style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                      Text('${toPersianDigits(images.length.toString())} تصویر | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 11)),
+                    ]),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showDialog(item: i)),
+                      IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteItem(i['id'])),
+                    ]),
+                    isThreeLine: true,
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(onPressed: () => _showDialog(), backgroundColor: AppTheme.yellow, foregroundColor: Colors.black, icon: const Icon(Icons.add), label: const Text('افزودن محصول')),
+    );
+  }
+}

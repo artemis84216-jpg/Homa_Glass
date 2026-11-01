@@ -29,12 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
         if (saved != null && saved.isNotEmpty) {
           _savedPassword = saved;
         }
-        _isLoading = false; // فقط بعد از اطمینان از لود شدن، لودینگ را غیرفعال می‌کنیم
+        _isLoading = false; // فقط بعد از خواندن رمز، لودینگ را غیرفعال می‌کنیم
       });
     }
   }
 
-  void _login() async {
+  void _login() {
     if (_isLoading) return; // جلوگیری از کلیک هنگام لودینگ
     
     final pass = _passwordController.text.trim();
@@ -45,9 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
     
     setState(() => _isLoading = true);
     
-    // شبیه‌سازی تأخیر کوتاه برای نمایش انیمیشن لودینگ
-    await Future.delayed(const Duration(milliseconds: 300));
-    
+    // بررسی رمز
     if (pass == _savedPassword) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
     } else {
@@ -62,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppTheme.backgroundBlack,
       body: Center(
         child: _isLoading
-            ? const CircularProgressIndicator(color: AppTheme.yellow)
+            ? const CircularProgressIndicator(color: AppTheme.yellow) // نمایش لودینگ تا زمانی که رمز خوانده شود
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Card(
@@ -102,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const Text('رمز پیش‌فرض: 1234', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                        Text('رمز فعلی سیستم: $_savedPassword', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)), // برای دیباگ
                       ],
                     ),
                   ),

@@ -55,8 +55,9 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
 
   Future<void> _showDialog({Map<String, dynamic>? item}) async {
     final isEdit = item != null;
-    final titleController = TextEditingController(text: item?['title']?.toString() ?? '');
-    final contentController = TextEditingController(text: item?['content']?.toString() ?? '');
+    final nameFaController = TextEditingController(text: item?['name_fa']?.toString() ?? '');
+    final nameEnController = TextEditingController(text: item?['name_en']?.toString() ?? '');
+    final descController = TextEditingController(text: item?['description']?.toString() ?? '');
     String? imagePathsJson = item?['image_paths'];
 
     await showDialog(
@@ -69,12 +70,14 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
             
             return AlertDialog(
               backgroundColor: AppTheme.cardBlack,
-              title: Text(isEdit ? 'ویرایش مقاله' : 'افزودن مقاله جدید', style: const TextStyle(color: AppTheme.yellow)),
+              title: Text(isEdit ? 'ویرایش محصول' : 'افزودن محصول جدید', style: const TextStyle(color: AppTheme.yellow)),
               content: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(controller: titleController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'عنوان مقاله *', prefixIcon: Icon(Icons.title, color: AppTheme.yellow))),
+                  TextField(controller: nameFaController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام فارسی *', prefixIcon: Icon(Icons.title, color: AppTheme.yellow))),
                   const SizedBox(height: 12),
-                  TextField(controller: contentController, maxLines: 6, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'متن کامل مقاله *', prefixIcon: Icon(Icons.description, color: AppTheme.yellow))),
+                  TextField(controller: nameEnController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام انگلیسی', prefixIcon: Icon(Icons.text_fields, color: AppTheme.yellow))),
+                  const SizedBox(height: 12),
+                  TextField(controller: descController, maxLines: 4, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'عملکرد / توضیحات', prefixIcon: Icon(Icons.description, color: AppTheme.yellow))),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -85,7 +88,7 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                       }
                     },
                     icon: const Icon(Icons.image, color: AppTheme.yellow),
-                    label: const Text('انتخاب عکس (چندتایی)', style: TextStyle(color: AppTheme.textWhite)),
+                    label: const Text('انتخاب تصاویر (چندتایی)', style: TextStyle(color: AppTheme.textWhite)),
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cardBlack, side: const BorderSide(color: AppTheme.yellow)),
                   ),
                   if (currentImages.isNotEmpty) ...[
@@ -111,14 +114,15 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: AppTheme.yellow, foregroundColor: Colors.black),
                   onPressed: () async {
-                    if (titleController.text.trim().isEmpty || contentController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('عنوان و متن الزامی است'), backgroundColor: Colors.red));
+                    if (nameFaController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام فارسی الزامی است'), backgroundColor: Colors.red));
                       return;
                     }
                     try {
                       final data = {
-                        'title': titleController.text.trim(),
-                        'content': contentController.text.trim(),
+                        'name_fa': nameFaController.text.trim(),
+                        'name_en': nameEnController.text.trim(),
+                        'description': descController.text.trim(),
                         'image_paths': currentImages.isNotEmpty ? currentImages.join('|') : null,
                         'created_at': getCurrentJalaliDateTime(),
                       };
@@ -155,47 +159,4 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(title: const Text('مدیریت اطلاعات عمومی'), centerTitle: true),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: AppTheme.yellow)) 
-        : _items.isEmpty 
-          ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.library_books, size: 80, color: AppTheme.textGrey), const SizedBox(height: 16), Text('مقاله‌ای ثبت نشده', style: TextStyle(fontSize: 18, color: AppTheme.textGrey))])) 
-          : ListView.builder(
-              padding: const EdgeInsets.all(12), itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final i = _items[index];
-                final List<String> images = parseImagesHelper(i['image_paths']);
-                
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: images.isNotEmpty 
-                        ? GestureDetector(
-                            onTap: () => _showFullScreenImage(context, images.first),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: SizedBox(
-                                width: 50, height: 50,
-                                child: Image.file(File(images.first), fit: BoxFit.cover),
-                              ),
-                            ),
-                          ) 
-                        : CircleAvatar(backgroundColor: AppTheme.yellow.withOpacity(0.2), child: const Icon(Icons.library_books, color: AppTheme.yellow)),
-                    title: Text(i['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
-                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${toPersianDigits(images.length.toString())} عکس | ${i['created_at'] ?? ''}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                      if (images.length > 1) Text('و ${toPersianDigits((images.length - 1).toString())} عکس دیگر', style: const TextStyle(color: AppTheme.textGrey, fontSize: 11, fontStyle: FontStyle.italic)),
-                    ]),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      IconButton(icon: const Icon(Icons.edit, color: AppTheme.yellow), onPressed: () => _showDialog(item: i)),
-                      IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteItem(i['id'])),
-                    ]),
-                    isThreeLine: true,
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(onPressed: () => _showDialog(), backgroundColor: AppTheme.yellow, foregroundColor: Colors.black, icon: const Icon(Icons.add), label: const Text('افزودن مقاله')),
-    );
-  }
-}
+      appBar: AppBar(title: const Text('مدیریت محصولات

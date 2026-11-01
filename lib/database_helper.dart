@@ -143,12 +143,13 @@ class DatabaseHelper {
     await db.execute('INSERT INTO plans (name, duration_value, duration_type, price, max_employees, max_customers, is_active, created_at) VALUES ("پلن حرفه‌ای - ۶ ماهه", 6, "months", 2500000, 5, 500, 1, "1403/01/01")');
     await db.execute('INSERT INTO plans (name, duration_value, duration_type, price, max_employees, max_customers, is_active, created_at) VALUES ("پلن سازمانی - ۱ ساله", 12, "months", 4500000, 999999, 999999, 1, "1403/01/01")');
 
-    // اطلاعات عمومی (جدید)
+    // اطلاعات عمومی (نسخه ۴ - با فیلدهای جدید)
     await db.execute('''
       CREATE TABLE general_info (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
+        name_fa TEXT NOT NULL,
+        name_en TEXT,
+        description TEXT,
         image_paths TEXT,
         created_at TEXT
       )

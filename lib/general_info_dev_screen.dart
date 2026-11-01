@@ -35,7 +35,9 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
   void _showFullScreenImage(BuildContext context, String imagePath) {
     final file = File(imagePath);
     if (!file.existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('فایل عکس یافت نشد'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فایل یافت نشد: $imagePath'), backgroundColor: Colors.red),
+      );
       return;
     }
     showDialog(
@@ -66,7 +68,6 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
         textDirection: TextDirection.rtl,
         child: StatefulBuilder(
           builder: (ctx, setStateDialog) {
-            // استفاده از parseImagesHelper دقیقاً مانند فریم‌ها
             List<String> currentImages = parseImagesHelper(imagePathsJson);
             
             return AlertDialog(
@@ -102,7 +103,11 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                           borderRadius: BorderRadius.circular(8),
                           child: SizedBox(
                             width: 80, height: 80,
-                            child: Image.file(File(path), fit: BoxFit.cover),
+                            child: Image.file(
+                              File(path), 
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                            ),
                           ),
                         ),
                       )).toList(),
@@ -124,7 +129,6 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                         'name_fa': nameFaController.text.trim(),
                         'name_en': nameEnController.text.trim(),
                         'description': descController.text.trim(),
-                        // ذخیره دقیقاً مانند فریم‌ها با جداکننده |
                         'image_paths': currentImages.isNotEmpty ? currentImages.join('|') : null,
                         'created_at': getCurrentJalaliDateTime(),
                       };
@@ -170,7 +174,6 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
               padding: const EdgeInsets.all(12), itemCount: _items.length,
               itemBuilder: (context, index) {
                 final i = _items[index];
-                // خواندن دقیقاً مانند فریم‌ها
                 final List<String> images = parseImagesHelper(i['image_paths']);
                 
                 return Card(
@@ -178,12 +181,37 @@ class _GeneralInfoDevScreenState extends State<GeneralInfoDevScreen> {
                   child: ListTile(
                     leading: images.isNotEmpty 
                         ? GestureDetector(
-                            onTap: () => _showFullScreenImage(context, images.first),
+                            onTap: () {
+                              final file = File(images.first);
+                              if (!file.existsSync()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('فایل یافت نشد: ${images.first}'), backgroundColor: Colors.red)
+                                );
+                                return;
+                              }
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => Dialog(
+                                  backgroundColor: Colors.black,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.pop(ctx),
+                                    child: InteractiveViewer(
+                                      panEnabled: true, boundaryMargin: const EdgeInsets.all(20), minScale: 0.5, maxScale: 4.0,
+                                      child: Image.file(file, fit: BoxFit.contain),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: SizedBox(
                                 width: 50, height: 50,
-                                child: Image.file(File(images.first), fit: BoxFit.cover),
+                                child: Image.file(
+                                  File(images.first), 
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                                ),
                               ),
                             ),
                           ) 

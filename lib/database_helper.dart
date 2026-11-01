@@ -283,7 +283,7 @@ class DatabaseHelper {
   Future<int> insertLicense(Map<String, dynamic> l) async { final db = await instance.database; return await db.insert('licenses', l); }
   Future<List<Map<String, dynamic>>> getAllLicenses() async { final db = await instance.database; return await db.query('licenses', orderBy: 'id DESC'); }
 
-  // ===== متدهای اطلاعات عمومی =====
+   // ===== متدهای اطلاعات عمومی =====
   Future<int> insertGeneralInfo(Map<String, dynamic> info) async { final db = await instance.database; return await db.insert('general_info', info); }
   Future<List<Map<String, dynamic>>> getAllGeneralInfo() async { final db = await instance.database; return await db.query('general_info', orderBy: 'id DESC'); }
   Future<int> updateGeneralInfo(int id, Map<String, dynamic> info) async { final db = await instance.database; return await db.update('general_info', info, where: 'id = ?', whereArgs: [id]); }
